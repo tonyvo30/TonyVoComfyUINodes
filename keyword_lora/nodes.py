@@ -136,7 +136,7 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                 io.String.Output(display_name="positive"),
                 io.String.Output(display_name="negative"),
                 io.String.Output(display_name="report"),
-                io.Combo.Output(display_name="character_lora"),
+                io.AnyType.Output(display_name="character_lora"),
                 io.Float.Output(display_name="character_strength"),
                 io.Boolean.Output(display_name="character_enabled"),
             ],
