@@ -7,6 +7,8 @@ import re
 from dataclasses import dataclass
 
 NO_LORA = "None"
+CHARACTER_AUTO = "auto"
+NO_CHARACTER = "none"
 
 # <lora:name>, <lora:name:strength> or <lora:name:model_strength:clip_strength>
 INLINE_LORA_TAG_PATTERN = re.compile(r"<lora:([^:<>]+)(?::([^:<>]*))?(?::([^:<>]*))?>", re.IGNORECASE)
@@ -30,6 +32,17 @@ class KeywordLoraRule:
 
 
 @dataclass(frozen=True)
+class KeywordCharacter:
+    lora_name: str
+    strength: float
+    match_any: str = ""
+    require_all: str = ""
+    exclude: str = ""
+    positive_append: str = ""
+    negative_append: str = ""
+
+
+@dataclass(frozen=True)
 class LoraApplication:
     lora_name: str
     strength_model: float
@@ -42,6 +55,7 @@ class KeywordLoraResult:
     positive: str
     negative: str
     lora_applications: tuple[LoraApplication, ...]
+    selected_character: KeywordCharacter | None
     report_lines: tuple[str, ...]
 
 
@@ -166,13 +180,44 @@ def format_strength(strength):
     return f"{strength:g}"
 
 
-def evaluate_keyword_loras(positive, negative, rules, available_lora_names):
+def select_character(text, characters, character_override):
+    """Return (character or None, report lines). The override is CHARACTER_AUTO,
+    NO_CHARACTER or a LoRA file name; otherwise the first character whose
+    keywords match the text is chosen."""
+    if character_override == NO_CHARACTER:
+        return None, ["skipped  characters  (override set to none)"]
+    if character_override != CHARACTER_AUTO:
+        character = next((character for character in characters if character.lora_name == character_override), None)
+        if character is None:
+            character = KeywordCharacter(character_override, 1.0)
+            return character, [f"character  {character_override}  strength 1  (override; no Character node uses this LoRA, nothing appended)"]
+        return character, [f"character  {character.lora_name}  strength {format_strength(character.strength)}  (override)"]
+
+    selected_character = None
+    report_lines = []
+    for character in characters:
+        if selected_character is not None:
+            report_lines.append(f"skipped  {character.lora_name}  (character {selected_character.lora_name} already selected)")
+            continue
+        matched, reason = describe_keyword_match(text, character.match_any, character.require_all, character.exclude)
+        if matched:
+            selected_character = character
+            report_lines.append(f"character  {character.lora_name}  strength {format_strength(character.strength)}  ({reason})")
+        else:
+            report_lines.append(f"skipped  {character.lora_name}  ({reason})")
+    return selected_character, report_lines
+
+
+def evaluate_keyword_loras(positive, negative, rules, available_lora_names, characters=(), character_override=CHARACTER_AUTO):
     """Work out which LoRAs to apply and build the final prompts.
 
-    Inline <lora:...> tags are read first. Rules are then evaluated in chain
-    order, and each rule sees the words appended by the rules before it, so one
-    rule's trigger words can set off a later rule. A LoRA is applied at most once:
-    the first tag or rule that applies it wins.
+    Inline <lora:...> tags are parsed from the positive prompt. Then one
+    character is selected and its text appended, so rules can react to it.
+    Tags and rules are then applied in chain order, and each rule sees the
+    words appended before it, so one rule's trigger words can set off a later
+    rule. A LoRA is applied at most once: the first tag or rule that applies
+    it wins. The selected character's LoRA is never applied here; it is
+    returned for a dedicated character loader.
     """
     lora_applications = []
     report_lines = []
@@ -189,6 +234,7 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names):
             f" clip {format_strength(lora_application.strength_clip)}  ({lora_application.source})"
         )
 
+    tag_applications = []
     for tag_match in INLINE_LORA_TAG_PATTERN.finditer(positive):
         tag_text = tag_match.group(0)
         try:
@@ -201,9 +247,19 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names):
         except ValueError:
             report_lines.append(f"error    {tag_text}  (strength is not a number)")
             continue
-        add_lora_application(LoraApplication(lora_name, strength_model, strength_clip, f"inline tag {tag_text}"))
+        tag_applications.append(LoraApplication(lora_name, strength_model, strength_clip, f"inline tag {tag_text}"))
 
     positive = strip_inline_lora_tags(positive)
+
+    selected_character, character_report_lines = select_character(positive, characters, character_override)
+    report_lines.extend(character_report_lines)
+    if selected_character is not None:
+        positive = append_unique_terms(positive, selected_character.positive_append)
+        negative = append_unique_terms(negative, selected_character.negative_append)
+        applied_lora_names.add(selected_character.lora_name)
+
+    for tag_application in tag_applications:
+        add_lora_application(tag_application)
 
     for rule in rules:
         rule_label = rule.lora_name if rule.lora_name != NO_LORA else "(text-only rule)"
@@ -221,4 +277,4 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names):
         else:
             report_lines.append(f"matched  {rule_label}  ({reason}; text only, no LoRA applied)")
 
-    return KeywordLoraResult(positive, negative, tuple(lora_applications), tuple(report_lines))
+    return KeywordLoraResult(positive, negative, tuple(lora_applications), selected_character, tuple(report_lines))

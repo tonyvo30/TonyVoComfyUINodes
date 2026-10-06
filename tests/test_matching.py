@@ -7,7 +7,10 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "keyword_lora"))
 
 from matching import (  # noqa: E402
+    CHARACTER_AUTO,
+    NO_CHARACTER,
     NO_LORA,
+    KeywordCharacter,
     KeywordLoraRule,
     append_unique_terms,
     contains_term,
@@ -23,6 +26,8 @@ AVAILABLE_LORA_NAMES = [
     "krea2/retro_ghibli_style_krea2.safetensors",
     "clothing/latex_dress.safetensors",
     "textures/shiny_latex.safetensors",
+    "characters/cristy.safetensors",
+    "characters/maya.safetensors",
     "a/duplicate.safetensors",
     "b/duplicate.safetensors",
 ]
@@ -177,6 +182,65 @@ class EvaluateTests(unittest.TestCase):
         rule = make_rule("clothing/latex_dress.safetensors", match_any="ghibli")
         result = evaluate_keyword_loras("cat <lora:retro_ghibli_style_krea2>", "", (rule,), AVAILABLE_LORA_NAMES)
         self.assertEqual(len(result.lora_applications), 1)
+
+
+
+CRISTY = KeywordCharacter("characters/cristy.safetensors", 0.9, match_any="cristy",
+                          positive_append="cristyren, long brunette hair", negative_append="blonde")
+MAYA = KeywordCharacter("characters/maya.safetensors", 1.0, match_any="maya", positive_append="mayachar, short red hair")
+
+
+class CharacterTests(unittest.TestCase):
+    def evaluate(self, positive, characters=(CRISTY, MAYA), character_override=CHARACTER_AUTO, rules=()):
+        return evaluate_keyword_loras(positive, "", rules, AVAILABLE_LORA_NAMES, characters, character_override)
+
+    def test_keyword_selects_character_and_appends_only_its_text(self):
+        result = self.evaluate("portrait of cristy in a cafe")
+        self.assertEqual(result.selected_character, CRISTY)
+        self.assertEqual(result.positive, "portrait of cristy in a cafe, cristyren, long brunette hair")
+        self.assertEqual(result.negative, "blonde")
+        self.assertNotIn("mayachar", result.positive)
+
+    def test_first_matching_character_wins(self):
+        result = self.evaluate("cristy and maya")
+        self.assertEqual(result.selected_character, CRISTY)
+        self.assertNotIn("mayachar", result.positive)
+
+    def test_no_match_selects_nothing(self):
+        result = self.evaluate("a woman in a cafe")
+        self.assertIsNone(result.selected_character)
+        self.assertEqual(result.positive, "a woman in a cafe")
+
+    def test_override_forces_character(self):
+        result = self.evaluate("a woman in a cafe", character_override="characters/maya.safetensors")
+        self.assertEqual(result.selected_character, MAYA)
+        self.assertIn("mayachar", result.positive)
+
+    def test_override_none_disables_characters(self):
+        result = self.evaluate("portrait of cristy", character_override=NO_CHARACTER)
+        self.assertIsNone(result.selected_character)
+        self.assertEqual(result.positive, "portrait of cristy")
+
+    def test_override_without_character_node(self):
+        result = self.evaluate("a woman", character_override="characters/other.safetensors")
+        self.assertEqual(result.selected_character.lora_name, "characters/other.safetensors")
+        self.assertEqual(result.positive, "a woman")
+
+    def test_rules_see_character_text(self):
+        hair_rule = make_rule("textures/shiny_latex.safetensors", match_any="brunette")
+        result = self.evaluate("portrait of cristy", rules=(hair_rule,))
+        self.assertEqual([application.lora_name for application in result.lora_applications], ["textures/shiny_latex.safetensors"])
+
+    def test_rule_does_not_also_load_character_lora(self):
+        rule = make_rule("characters/cristy.safetensors", match_any="cristy")
+        result = self.evaluate("portrait of cristy", rules=(rule,))
+        self.assertEqual(result.lora_applications, ())
+
+    def test_inline_tag_for_selected_character_not_loaded_here(self):
+        result = self.evaluate("portrait of cristy <lora:characters/cristy.safetensors:0.5>")
+        self.assertEqual(result.selected_character, CRISTY)
+        self.assertEqual(result.lora_applications, ())
+        self.assertTrue(any("already applied" in line for line in result.report_lines), result.report_lines)
 
 
 if __name__ == "__main__":

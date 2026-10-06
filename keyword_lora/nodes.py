@@ -6,9 +6,11 @@ import comfy.utils
 import folder_paths
 from comfy_api.latest import io
 
-from .matching import NO_LORA, KeywordLoraRule, describe_keyword_match, evaluate_keyword_loras, strip_inline_lora_tags
+from .matching import (CHARACTER_AUTO, NO_CHARACTER, NO_LORA, KeywordCharacter, KeywordLoraRule, describe_keyword_match,
+                       evaluate_keyword_loras, strip_inline_lora_tags)
 
 KeywordLoraRules = io.Custom("TONYVO_KEYWORD_LORA_RULES")
+KeywordCharacters = io.Custom("TONYVO_KEYWORD_CHARACTERS")
 
 CATEGORY = "TonyVoNodes"
 
@@ -69,6 +71,42 @@ class KeywordLoraRuleNode(io.ComfyNode):
         return io.NodeOutput((previous_rules or ()) + (rule,))
 
 
+class KeywordCharacterNode(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="TonyVoKeywordCharacter",
+            display_name="Keyword Character",
+            category=CATEGORY,
+            description="Defines a character selected by keywords. Chain characters together and feed them into "
+                        "Apply Keyword LoRAs. Only one character is selected per prompt: the first that matches.",
+            inputs=[
+                io.Combo.Input("lora_name", options=folder_paths.get_filename_list("loras"),
+                               tooltip="Character LoRA. Passed out of Apply Keyword LoRAs for a character loader such as Krea2T Character LoRA."),
+                io.Float.Input("strength", default=1.0, min=-100.0, max=100.0, step=0.01),
+                io.String.Input("match_any", multiline=True, placeholder="cristy",
+                                tooltip="Comma separated. The character is selected when any of these appear in the positive prompt."),
+                io.String.Input("require_all", multiline=True,
+                                tooltip="Comma separated. Every one of these must also appear."),
+                io.String.Input("exclude", multiline=True,
+                                tooltip="Comma separated. The character is not selected if any of these appear."),
+                io.String.Input("positive_append", multiline=True, placeholder="trigger word, hair, skin tone, build",
+                                tooltip="Comma separated words appended to the positive prompt when this character is selected."),
+                io.String.Input("negative_append", multiline=True,
+                                tooltip="Comma separated words appended to the negative prompt when this character is selected."),
+                KeywordCharacters.Input("previous_characters", optional=True,
+                                        tooltip="Characters earlier in the chain. They are checked before this one."),
+            ],
+            outputs=[KeywordCharacters.Output(display_name="characters")],
+        )
+
+    @classmethod
+    def execute(cls, lora_name, strength, match_any, require_all, exclude, positive_append, negative_append,
+                previous_characters=None) -> io.NodeOutput:
+        character = KeywordCharacter(lora_name, strength, match_any, require_all, exclude, positive_append, negative_append)
+        return io.NodeOutput((previous_characters or ()) + (character,))
+
+
 class ApplyKeywordLorasNode(io.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -86,6 +124,11 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                                         "<lora:name:model_strength:clip_strength> tags, which are applied and removed."),
                 io.String.Input("negative", multiline=True, optional=True, default=""),
                 KeywordLoraRules.Input("rules", optional=True),
+                KeywordCharacters.Input("characters", optional=True),
+                io.Combo.Input("character_override", options=[CHARACTER_AUTO, NO_CHARACTER] + folder_paths.get_filename_list("loras"),
+                               default=CHARACTER_AUTO,
+                               tooltip="auto picks the character by keywords. none disables characters. "
+                                       "Choosing a LoRA forces the Keyword Character that uses it."),
             ],
             outputs=[
                 io.Model.Output(display_name="MODEL"),
@@ -93,13 +136,17 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                 io.String.Output(display_name="positive"),
                 io.String.Output(display_name="negative"),
                 io.String.Output(display_name="report"),
+                io.Combo.Output(display_name="character_lora"),
+                io.Float.Output(display_name="character_strength"),
+                io.Boolean.Output(display_name="character_enabled"),
             ],
         )
 
     @classmethod
-    def execute(cls, model, positive, clip=None, negative="", rules=None) -> io.NodeOutput:
+    def execute(cls, model, positive, character_override, clip=None, negative="", rules=None, characters=None) -> io.NodeOutput:
         global loaded_lora_files_by_path
-        result = evaluate_keyword_loras(positive, negative or "", rules or (), folder_paths.get_filename_list("loras"))
+        result = evaluate_keyword_loras(positive, negative or "", rules or (), folder_paths.get_filename_list("loras"),
+                                        characters or (), character_override)
 
         next_loaded_lora_files_by_path = {}
         for lora_application in result.lora_applications:
@@ -111,7 +158,9 @@ class ApplyKeywordLorasNode(io.ComfyNode):
 
         report = "\n".join(result.report_lines) or "no inline tags or rules"
         logging.info("[Apply Keyword LoRAs]\n%s", report)
-        return io.NodeOutput(model, clip, result.positive, result.negative, report)
+        character = result.selected_character
+        return io.NodeOutput(model, clip, result.positive, result.negative, report,
+                             character.lora_name if character else "", character.strength if character else 0.0, character is not None)
 
 
 class KeywordMatchNode(io.ComfyNode):
