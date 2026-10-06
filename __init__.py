@@ -1,9 +1,12 @@
-from .loraLoader import addLoraWithString
+from comfy_api.latest import ComfyExtension, io
 
-NODE_CLASS_MAPPINGS = {
-    "addLoraWithString": addLoraWithString,
-}
+from .keyword_lora.nodes import ApplyKeywordLorasNode, KeywordLoraRuleNode
 
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "addLoraWithString": "Add Lora with String",
-}
+
+class TonyVoNodesExtension(ComfyExtension):
+    async def get_node_list(self) -> list[type[io.ComfyNode]]:
+        return [KeywordLoraRuleNode, ApplyKeywordLorasNode]
+
+
+async def comfy_entrypoint() -> TonyVoNodesExtension:
+    return TonyVoNodesExtension()
