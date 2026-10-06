@@ -94,8 +94,13 @@ def append_unique_terms(text, additions_text):
 
 def describe_rule_match(rule, text):
     """Return (matched, reason) for a rule against the given prompt text."""
-    match_any_terms = split_terms(rule.match_any)
-    require_all_terms = split_terms(rule.require_all)
+    return describe_keyword_match(text, rule.match_any, rule.require_all, rule.exclude)
+
+
+def describe_keyword_match(text, match_any, require_all, exclude):
+    """Return (matched, reason) for the three keyword lists against the given text."""
+    match_any_terms = split_terms(match_any)
+    require_all_terms = split_terms(require_all)
     if not match_any_terms and not require_all_terms:
         return False, "no keywords set"
 
@@ -109,7 +114,7 @@ def describe_rule_match(rule, text):
     if missing_term is not None:
         return False, f'missing required "{missing_term}"'
 
-    excluded_term = find_first_contained_term(text, split_terms(rule.exclude))
+    excluded_term = find_first_contained_term(text, split_terms(exclude))
     if excluded_term is not None:
         return False, f'excluded by "{excluded_term}"'
 

@@ -27,6 +27,15 @@ The positive prompt can also contain inline tags, which are applied and removed 
 
 Each LoRA is applied at most once; the first inline tag or rule that applies it wins.
 
+### Keyword Match
+Outputs `matched` (true/false) and a `reason` using the same `match_any` / `require_all` / `exclude` logic as the rules. Connect `matched` to another node's `enabled` input to switch it on by keyword, e.g. [Krea2T Character LoRA — Image Only](https://github.com/capitan01R/ComfyUI-Krea2T-Enhancer#character-lora--image-only), which has its own way of applying character LoRAs:
+
+```
+Krea2 model → Apply Keyword LoRAs → other LoRA loaders → Krea2T Character LoRA (enabled ← Keyword Match) → sampler
+```
+
+Feed `text` from the `positive` output of Apply Keyword LoRAs so words added by rules count. For example, a text-only rule matching `cristy` appends the trigger word `cristyren`, and Keyword Match on `cristyren` enables the character loader.
+
 ### Tests
 ```
 python -m unittest discover tests

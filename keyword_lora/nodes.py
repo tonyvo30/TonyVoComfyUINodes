@@ -6,7 +6,7 @@ import comfy.utils
 import folder_paths
 from comfy_api.latest import io
 
-from .matching import NO_LORA, KeywordLoraRule, evaluate_keyword_loras
+from .matching import NO_LORA, KeywordLoraRule, describe_keyword_match, evaluate_keyword_loras, strip_inline_lora_tags
 
 KeywordLoraRules = io.Custom("TONYVO_KEYWORD_LORA_RULES")
 
@@ -112,3 +112,34 @@ class ApplyKeywordLorasNode(io.ComfyNode):
         report = "\n".join(result.report_lines) or "no inline tags or rules"
         logging.info("[Apply Keyword LoRAs]\n%s", report)
         return io.NodeOutput(model, clip, result.positive, result.negative, report)
+
+
+class KeywordMatchNode(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="TonyVoKeywordMatch",
+            display_name="Keyword Match",
+            category=CATEGORY,
+            description="Outputs true when the keywords are found in the text. Connect it to another node's enabled "
+                        "input, e.g. Krea2T Character LoRA, to switch that node on by keyword.",
+            inputs=[
+                io.String.Input("text", force_input=True,
+                                tooltip="Text to search, usually the positive output of Apply Keyword LoRAs so words added by rules count."),
+                io.String.Input("match_any", multiline=True,
+                                tooltip="Comma separated. Matches when any of these appear in the text."),
+                io.String.Input("require_all", multiline=True,
+                                tooltip="Comma separated. Every one of these must also appear."),
+                io.String.Input("exclude", multiline=True,
+                                tooltip="Comma separated. No match if any of these appear."),
+            ],
+            outputs=[
+                io.Boolean.Output(display_name="matched"),
+                io.String.Output(display_name="reason"),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, text, match_any, require_all, exclude) -> io.NodeOutput:
+        matched, reason = describe_keyword_match(strip_inline_lora_tags(text), match_any, require_all, exclude)
+        return io.NodeOutput(matched, reason)

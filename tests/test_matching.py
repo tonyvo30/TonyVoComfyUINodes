@@ -11,6 +11,7 @@ from matching import (  # noqa: E402
     KeywordLoraRule,
     append_unique_terms,
     contains_term,
+    describe_keyword_match,
     describe_rule_match,
     evaluate_keyword_loras,
     resolve_lora_name,
@@ -77,6 +78,16 @@ class RuleMatchTests(unittest.TestCase):
 
     def test_no_keywords_never_matches(self):
         self.assertFalse(describe_rule_match(make_rule(), "anything")[0])
+
+
+class KeywordMatchTests(unittest.TestCase):
+    def test_match_any_require_all_and_exclude(self):
+        self.assertTrue(describe_keyword_match("cristy at the beach", "cristy", "beach", "")[0])
+        self.assertFalse(describe_keyword_match("cristy at the beach", "cristy", "", "beach")[0])
+        self.assertFalse(describe_keyword_match("a woman", "cristy", "", "")[0])
+
+    def test_empty_keywords_never_match(self):
+        self.assertFalse(describe_keyword_match("anything", "", "", "")[0])
 
 
 class AppendTests(unittest.TestCase):
