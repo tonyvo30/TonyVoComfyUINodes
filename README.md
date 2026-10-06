@@ -38,6 +38,8 @@ Takes the model, CLIP, prompts, rules and characters, and outputs the patched mo
 
 The `characters` input takes a chain of Keyword Character nodes. `character_override` forces the selection: `auto` picks the character by keywords, `none` disables characters, and a LoRA name forces the character that uses it (or a bare strength-1 selection if no Character node uses it). The selected character's trigger words are appended to the prompts, and its LoRA, strength and on/off state are passed out on `character_lora`, `character_strength` and `character_enabled`. When no character is selected the LoRA name is empty and `character_enabled` is false, so the character loader stays bypassed.
 
+To preview the final prompt on the canvas, connect the `positive`, `negative` or `report` outputs to a text display node such as ShowText (was-node-suite) or PreviewAny (Impact Pack).
+
 The positive prompt can also contain inline tags, which are applied and removed from the text:
 `<lora:name>`, `<lora:name:strength>` or `<lora:name:model_strength:clip_strength>`. `name` can be the file name or the path inside the loras folder, with or without extension.
 
