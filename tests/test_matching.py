@@ -165,6 +165,25 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(result.added_positive, "cristyren, long brunette hair, wavy hair")
         self.assertEqual(result.added_negative, "blonde, short hair")
 
+    def test_trigger_is_appended_before_positive_append_and_output(self):
+        rule = make_rule(match_any="ghibli", trigger="ghibli style", positive_append="soft light")
+        result = evaluate_keyword_loras("ghibli landscape", "", (rule,), AVAILABLE_LORA_NAMES)
+        self.assertEqual(result.positive, "ghibli landscape, ghibli style, soft light")
+        self.assertEqual(result.trigger, "ghibli style")
+
+    def test_trigger_output_keeps_words_the_prompt_already_had(self):
+        rule = make_rule(match_any="ghibli", trigger="ghibli style")
+        result = evaluate_keyword_loras("ghibli style landscape", "", (rule,), AVAILABLE_LORA_NAMES)
+        self.assertEqual(result.added_positive, "")
+        self.assertEqual(result.trigger, "ghibli style")
+
+    def test_trigger_collects_character_and_rules_without_duplicates(self):
+        character = KeywordCharacter("characters/cristy.safetensors", 1.0, match_any="cristy", trigger="cristyren")
+        rule = make_rule(match_any="cristyren", trigger="cristyren, latexdress")
+        unmatched_rule = make_rule(match_any="maya", trigger="mayachar")
+        result = evaluate_keyword_loras("portrait of cristy", "", (rule, unmatched_rule), AVAILABLE_LORA_NAMES, (character,))
+        self.assertEqual(result.trigger, "cristyren, latexdress")
+
     def test_unmatched_rule_changes_nothing(self):
         rule = make_rule(match_any="ghibli", positive_append="ghibli style")
         result = evaluate_keyword_loras("a photo", "", (rule,), AVAILABLE_LORA_NAMES)

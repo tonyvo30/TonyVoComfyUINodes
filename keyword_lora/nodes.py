@@ -58,6 +58,9 @@ class KeywordLoraRuleNode(io.ComfyNode):
                                         "Later rules in the chain can match on these."),
                 io.String.Input("negative_append", multiline=True,
                                 tooltip="Comma separated words appended to the negative prompt when the rule matches."),
+                io.String.Input("trigger", multiline=True,
+                                tooltip="Comma separated trigger words. Appended to the positive prompt when the rule matches "
+                                        "and also passed out on the trigger output of Apply Keyword LoRAs."),
                 KeywordLoraRules.Input("previous_rules", optional=True,
                                        tooltip="Rules earlier in the chain. They are evaluated before this one."),
             ],
@@ -66,9 +69,9 @@ class KeywordLoraRuleNode(io.ComfyNode):
 
     @classmethod
     def execute(cls, lora_name, strength_model, strength_clip, match_any, require_all, exclude,
-                positive_append, negative_append, previous_rules=None) -> io.NodeOutput:
+                positive_append, negative_append, trigger, previous_rules=None) -> io.NodeOutput:
         rule = KeywordLoraRule(lora_name, strength_model, strength_clip, match_any, require_all, exclude,
-                               positive_append, negative_append)
+                               positive_append, negative_append, trigger)
         return io.NodeOutput((previous_rules or ()) + (rule,))
 
 
@@ -95,6 +98,9 @@ class KeywordCharacterNode(io.ComfyNode):
                                 tooltip="Comma separated words appended to the positive prompt when this character is selected."),
                 io.String.Input("negative_append", multiline=True,
                                 tooltip="Comma separated words appended to the negative prompt when this character is selected."),
+                io.String.Input("trigger", multiline=True,
+                                tooltip="Comma separated trigger words. Appended to the positive prompt when this character is selected "
+                                        "and also passed out on the trigger output of Apply Keyword LoRAs."),
                 KeywordCharacters.Input("previous_characters", optional=True,
                                         tooltip="Characters earlier in the chain. They are checked before this one."),
             ],
@@ -102,9 +108,9 @@ class KeywordCharacterNode(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, lora_name, strength, match_any, require_all, exclude, positive_append, negative_append,
+    def execute(cls, lora_name, strength, match_any, require_all, exclude, positive_append, negative_append, trigger,
                 previous_characters=None) -> io.NodeOutput:
-        character = KeywordCharacter(lora_name, strength, match_any, require_all, exclude, positive_append, negative_append)
+        character = KeywordCharacter(lora_name, strength, match_any, require_all, exclude, positive_append, negative_append, trigger)
         return io.NodeOutput((previous_characters or ()) + (character,))
 
 
@@ -144,6 +150,8 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                                  tooltip="Only the words appended to the positive prompt by the character and matched rules."),
                 io.String.Output(display_name="added_negative",
                                  tooltip="Only the words appended to the negative prompt by the character and matched rules."),
+                io.String.Output(display_name="trigger",
+                                 tooltip="Trigger words of the selected character and matched rules, including ones the prompt already contained."),
             ],
         )
 
@@ -166,7 +174,7 @@ class ApplyKeywordLorasNode(io.ComfyNode):
         character = result.selected_character
         return io.NodeOutput(model, clip, result.positive, result.negative, report,
                              character.lora_name if character else "", character.strength if character else 0.0, character is not None,
-                             result.added_positive, result.added_negative)
+                             result.added_positive, result.added_negative, result.trigger)
 
 
 class KeywordMatchNode(io.ComfyNode):

@@ -13,7 +13,8 @@ One rule per LoRA. Chain rules through `previous_rules` and connect the last one
 | `match_any` | Comma separated. Matches when any of these appear. |
 | `require_all` | Comma separated. Every one of these must also appear. |
 | `exclude` | Comma separated. No match if any of these appear. |
-| `positive_append` / `negative_append` | Comma separated words (e.g. trigger words) added to the prompts on a match. Words already present are skipped. |
+| `positive_append` / `negative_append` | Comma separated words added to the prompts on a match. Words already present are skipped. |
+| `trigger` | Comma separated trigger words. Added to the positive prompt before `positive_append` on a match, and passed out on the `trigger` output of Apply Keyword LoRAs. |
 
 Matching is case-insensitive and whole-word (`cat` does not match `category`). Spaces in a keyword also match underscores or no space, so `chicken jockey` matches `chicken_jockey` and `chickenjockey`.
 
@@ -29,7 +30,8 @@ Defines a character selected by keywords, the same `match_any` / `require_all` /
 | `match_any` | Comma separated. The character is selected when any of these appear. |
 | `require_all` | Comma separated. Every one of these must also appear. |
 | `exclude` | Comma separated. Not selected if any of these appear. |
-| `positive_append` / `negative_append` | Comma separated words (e.g. trigger words) appended to the prompts on a selection. |
+| `positive_append` / `negative_append` | Comma separated words appended to the prompts on a selection. |
+| `trigger` | Comma separated trigger words. Added to the positive prompt before `positive_append` on a selection, and passed out on the `trigger` output of Apply Keyword LoRAs. |
 
 Chain characters through `previous_characters`. Characters are checked before the rules, so a rule can match on a selected character's trigger word: e.g. a character appends `cristyren` and a later refusal-reduction rule matches on `cristyren`.
 
@@ -40,7 +42,9 @@ The `characters` input takes a chain of Keyword Character nodes. `character_over
 
 `added_positive` and `added_negative` hold only the words the selected character and matched rules appended, comma separated and in the order they were added. Words skipped because the prompt already contained them are not included.
 
-To preview the final prompt on the canvas, connect the `positive`, `negative`, `added_positive`, `added_negative` or `report` outputs to a text display node such as ShowText (was-node-suite) or PreviewAny (Impact Pack).
+`trigger` holds the trigger words of the selected character and every matched rule, without duplicates. Unlike `added_positive`, it includes trigger words the prompt already contained.
+
+To preview the final prompt on the canvas, connect the `positive`, `negative`, `added_positive`, `added_negative`, `trigger` or `report` outputs to a text display node such as ShowText (was-node-suite) or PreviewAny (Impact Pack).
 
 The positive prompt can also contain inline tags, which are applied and removed from the text:
 `<lora:name>`, `<lora:name:strength>` or `<lora:name:model_strength:clip_strength>`. `name` can be the file name or the path inside the loras folder, with or without extension.

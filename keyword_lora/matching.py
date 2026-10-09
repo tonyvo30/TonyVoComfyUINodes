@@ -29,6 +29,7 @@ class KeywordLoraRule:
     exclude: str = ""
     positive_append: str = ""
     negative_append: str = ""
+    trigger: str = ""
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class KeywordCharacter:
     exclude: str = ""
     positive_append: str = ""
     negative_append: str = ""
+    trigger: str = ""
 
 
 @dataclass(frozen=True)
@@ -56,6 +58,7 @@ class KeywordLoraResult:
     negative: str
     added_positive: str
     added_negative: str
+    trigger: str
     lora_applications: tuple[LoraApplication, ...]
     selected_character: KeywordCharacter | None
     report_lines: tuple[str, ...]
@@ -245,10 +248,12 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
     applied_lora_names = set()
     added_positive_terms = []
     added_negative_terms = []
+    trigger_terms = []
 
-    def append_to_prompts(positive_append, negative_append):
+    def append_to_prompts(trigger, positive_append, negative_append):
         nonlocal positive, negative
-        new_positive_terms = find_new_terms(positive, positive_append)
+        trigger_terms.extend(find_new_terms(", ".join(trigger_terms), trigger))
+        new_positive_terms = find_new_terms(positive, f"{trigger}, {positive_append}")
         new_negative_terms = find_new_terms(negative, negative_append)
         positive = append_terms(positive, new_positive_terms)
         negative = append_terms(negative, new_negative_terms)
@@ -286,7 +291,7 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
     selected_character, character_report_lines = select_character(positive, characters, character_override)
     report_lines.extend(character_report_lines)
     if selected_character is not None:
-        append_to_prompts(selected_character.positive_append, selected_character.negative_append)
+        append_to_prompts(selected_character.trigger, selected_character.positive_append, selected_character.negative_append)
         applied_lora_names.add(selected_character.lora_name)
 
     for tag_application in tag_applications:
@@ -299,7 +304,7 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
             report_lines.append(f"skipped  {rule_label}  ({reason})")
             continue
 
-        append_to_prompts(rule.positive_append, rule.negative_append)
+        append_to_prompts(rule.trigger, rule.positive_append, rule.negative_append)
 
         lora_has_effect = rule.strength_model != 0 or rule.strength_clip != 0
         if rule.lora_name != NO_LORA and lora_has_effect:
@@ -308,4 +313,5 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
             report_lines.append(f"matched  {rule_label}  ({reason}; text only, no LoRA applied)")
 
     return KeywordLoraResult(positive, negative, ", ".join(added_positive_terms), ", ".join(added_negative_terms),
+                             ", ".join(trigger_terms),
                              tuple(lora_applications), selected_character, tuple(report_lines))
