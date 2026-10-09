@@ -12,11 +12,12 @@ from matching import (  # noqa: E402
     NO_LORA,
     KeywordCharacter,
     KeywordLoraRule,
-    append_unique_terms,
+    append_terms,
     contains_term,
     describe_keyword_match,
     describe_rule_match,
     evaluate_keyword_loras,
+    find_new_terms,
     resolve_lora_name,
     split_terms,
     strip_inline_lora_tags,
@@ -97,13 +98,16 @@ class KeywordMatchTests(unittest.TestCase):
 
 class AppendTests(unittest.TestCase):
     def test_keeps_order_and_skips_existing(self):
-        self.assertEqual(append_unique_terms("a cat, ghibli style", "ghibli style, b, a2, b"), "a cat, ghibli style, b, a2")
+        self.assertEqual(find_new_terms("a cat, ghibli style", "ghibli style, b, a2, b"), ["b", "a2"])
 
     def test_empty_prompt(self):
-        self.assertEqual(append_unique_terms("", "ghibli style"), "ghibli style")
+        self.assertEqual(append_terms("", ["ghibli style"]), "ghibli style")
 
     def test_trailing_comma_in_prompt(self):
-        self.assertEqual(append_unique_terms("a cat, ", "ghibli style"), "a cat, ghibli style")
+        self.assertEqual(append_terms("a cat, ", ["ghibli style"]), "a cat, ghibli style")
+
+    def test_no_terms_leaves_text_unchanged(self):
+        self.assertEqual(append_terms("a cat, ", []), "a cat, ")
 
 
 class InlineTagTests(unittest.TestCase):
@@ -147,10 +151,23 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(len(result.lora_applications), 1)
         self.assertEqual(result.lora_applications[0].strength_model, 0.8)
 
+    def test_added_terms_are_reported_separately(self):
+        rule = make_rule(match_any="ghibli", positive_append="ghibli style, landscape, soft light", negative_append="photo, blurry")
+        result = evaluate_keyword_loras("ghibli landscape", "blurry", (rule,), AVAILABLE_LORA_NAMES)
+        self.assertEqual(result.added_positive, "ghibli style, soft light")
+        self.assertEqual(result.added_negative, "photo")
+
+    def test_added_terms_collect_character_and_rules_in_order(self):
+        hair_rule = make_rule(NO_LORA, match_any="brunette", positive_append="wavy hair, cristyren", negative_append="short hair")
+        result = evaluate_keyword_loras("portrait of cristy", "", (hair_rule,), AVAILABLE_LORA_NAMES, (CRISTY,))
+        self.assertEqual(result.added_positive, "cristyren, long brunette hair, wavy hair")
+        self.assertEqual(result.added_negative, "blonde, short hair")
+
     def test_unmatched_rule_changes_nothing(self):
         rule = make_rule(match_any="ghibli", positive_append="ghibli style")
         result = evaluate_keyword_loras("a photo", "", (rule,), AVAILABLE_LORA_NAMES)
         self.assertEqual(result.positive, "a photo")
+        self.assertEqual(result.added_positive, "")
         self.assertEqual(result.lora_applications, ())
 
     def test_later_rule_can_match_earlier_rules_appended_words(self):

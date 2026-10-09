@@ -139,6 +139,10 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                 io.AnyType.Output(display_name="character_lora"),
                 io.Float.Output(display_name="character_strength"),
                 io.Boolean.Output(display_name="character_enabled"),
+                io.String.Output(display_name="added_positive",
+                                 tooltip="Only the words appended to the positive prompt by the character and matched rules."),
+                io.String.Output(display_name="added_negative",
+                                 tooltip="Only the words appended to the negative prompt by the character and matched rules."),
             ],
         )
 
@@ -160,7 +164,8 @@ class ApplyKeywordLorasNode(io.ComfyNode):
         logging.info("[Apply Keyword LoRAs]\n%s", report)
         character = result.selected_character
         return io.NodeOutput(model, clip, result.positive, result.negative, report,
-                             character.lora_name if character else "", character.strength if character else 0.0, character is not None)
+                             character.lora_name if character else "", character.strength if character else 0.0, character is not None,
+                             result.added_positive, result.added_negative)
 
 
 class KeywordMatchNode(io.ComfyNode):

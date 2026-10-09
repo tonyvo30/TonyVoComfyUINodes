@@ -54,6 +54,8 @@ class LoraApplication:
 class KeywordLoraResult:
     positive: str
     negative: str
+    added_positive: str
+    added_negative: str
     lora_applications: tuple[LoraApplication, ...]
     selected_character: KeywordCharacter | None
     report_lines: tuple[str, ...]
@@ -92,17 +94,21 @@ def strip_inline_lora_tags(text):
     return without_tags.strip().strip(",").strip()
 
 
-def append_unique_terms(text, additions_text):
-    """Append each comma separated addition that the text does not already contain."""
+def find_new_terms(text, additions_text):
+    """Return each comma separated addition that the text does not already contain."""
     new_terms = []
     for term in split_terms(additions_text):
         already_present = contains_term(text, term) or any(contains_term(existing, term) for existing in new_terms)
         if not already_present:
             new_terms.append(term)
-    if not new_terms:
+    return new_terms
+
+
+def append_terms(text, terms):
+    if not terms:
         return text
     trimmed_text = text.rstrip().rstrip(",").rstrip()
-    joined_terms = ", ".join(new_terms)
+    joined_terms = ", ".join(terms)
     return f"{trimmed_text}, {joined_terms}" if trimmed_text else joined_terms
 
 
@@ -222,6 +228,17 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
     lora_applications = []
     report_lines = []
     applied_lora_names = set()
+    added_positive_terms = []
+    added_negative_terms = []
+
+    def append_to_prompts(positive_append, negative_append):
+        nonlocal positive, negative
+        new_positive_terms = find_new_terms(positive, positive_append)
+        new_negative_terms = find_new_terms(negative, negative_append)
+        positive = append_terms(positive, new_positive_terms)
+        negative = append_terms(negative, new_negative_terms)
+        added_positive_terms.extend(new_positive_terms)
+        added_negative_terms.extend(new_negative_terms)
 
     def add_lora_application(lora_application):
         if lora_application.lora_name in applied_lora_names:
@@ -254,8 +271,7 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
     selected_character, character_report_lines = select_character(positive, characters, character_override)
     report_lines.extend(character_report_lines)
     if selected_character is not None:
-        positive = append_unique_terms(positive, selected_character.positive_append)
-        negative = append_unique_terms(negative, selected_character.negative_append)
+        append_to_prompts(selected_character.positive_append, selected_character.negative_append)
         applied_lora_names.add(selected_character.lora_name)
 
     for tag_application in tag_applications:
@@ -268,8 +284,7 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
             report_lines.append(f"skipped  {rule_label}  ({reason})")
             continue
 
-        positive = append_unique_terms(positive, rule.positive_append)
-        negative = append_unique_terms(negative, rule.negative_append)
+        append_to_prompts(rule.positive_append, rule.negative_append)
 
         lora_has_effect = rule.strength_model != 0 or rule.strength_clip != 0
         if rule.lora_name != NO_LORA and lora_has_effect:
@@ -277,4 +292,5 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
         else:
             report_lines.append(f"matched  {rule_label}  ({reason}; text only, no LoRA applied)")
 
-    return KeywordLoraResult(positive, negative, tuple(lora_applications), selected_character, tuple(report_lines))
+    return KeywordLoraResult(positive, negative, ", ".join(added_positive_terms), ", ".join(added_negative_terms),
+                             tuple(lora_applications), selected_character, tuple(report_lines))
