@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 
 import comfy.sd
 import comfy.utils
@@ -7,7 +8,7 @@ import folder_paths
 from comfy_api.latest import io
 
 from .matching import (CHARACTER_AUTO, NO_CHARACTER, NO_LORA, KeywordCharacter, KeywordLoraRule, describe_keyword_match,
-                       evaluate_keyword_loras, strip_inline_lora_tags)
+                       evaluate_keyword_loras, list_lora_folders, list_loras_in_folder, strip_inline_lora_tags)
 
 KeywordLoraRules = io.Custom("TONYVO_KEYWORD_LORA_RULES")
 KeywordCharacters = io.Custom("TONYVO_KEYWORD_CHARACTERS")
@@ -197,3 +198,28 @@ class KeywordMatchNode(io.ComfyNode):
     def execute(cls, text, match_any, require_all, exclude) -> io.NodeOutput:
         matched, reason = describe_keyword_match(strip_inline_lora_tags(text), match_any, require_all, exclude)
         return io.NodeOutput(matched, reason)
+
+
+class RandomLoraNode(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="TonyVoRandomLora",
+            display_name="Random LoRA",
+            category=CATEGORY,
+            description="Picks a random LoRA from a subfolder of the loras folder. Connect it to character_override "
+                        "on Apply Keyword LoRAs to force a random character.",
+            inputs=[
+                io.Combo.Input("folder", options=list_lora_folders(folder_paths.get_filename_list("loras")),
+                               tooltip="Subfolder of the loras folder. Only LoRAs directly inside it are picked, not ones in its subfolders."),
+                io.Int.Input("seed", default=0, min=0, max=0xffffffffffffffff, control_after_generate=True),
+            ],
+            outputs=[io.AnyType.Output(display_name="lora_name")],
+        )
+
+    @classmethod
+    def execute(cls, folder, seed) -> io.NodeOutput:
+        lora_names = list_loras_in_folder(folder_paths.get_filename_list("loras"), folder)
+        if not lora_names:
+            raise ValueError(f'No LoRAs found in "{folder}"')
+        return io.NodeOutput(random.Random(seed).choice(lora_names))

@@ -18,6 +18,8 @@ from matching import (  # noqa: E402
     describe_rule_match,
     evaluate_keyword_loras,
     find_new_terms,
+    list_lora_folders,
+    list_loras_in_folder,
     resolve_lora_name,
     split_terms,
     strip_inline_lora_tags,
@@ -258,6 +260,18 @@ class CharacterTests(unittest.TestCase):
         self.assertEqual(result.selected_character, CRISTY)
         self.assertEqual(result.lora_applications, ())
         self.assertTrue(any("already applied" in line for line in result.report_lines), result.report_lines)
+
+
+class LoraFolderTests(unittest.TestCase):
+    LORA_NAMES = ["top.safetensors", "krea2\\test\\cristy.safetensors", "krea2/test/natalee.safetensors",
+                  "krea2/style.safetensors", "krea2/test/nested/other.safetensors"]
+
+    def test_lists_folders_that_contain_loras(self):
+        self.assertEqual(list_lora_folders(self.LORA_NAMES), ["krea2", "krea2/test", "krea2/test/nested"])
+
+    def test_lists_only_direct_children_with_either_slash(self):
+        self.assertEqual(list_loras_in_folder(self.LORA_NAMES, "krea2/test"),
+                         ["krea2/test/natalee.safetensors", "krea2\\test\\cristy.safetensors"])
 
 
 if __name__ == "__main__":

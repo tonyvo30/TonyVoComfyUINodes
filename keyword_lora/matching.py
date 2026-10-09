@@ -151,6 +151,21 @@ def remove_extension(lora_path):
     return re.sub(r"\.[^./]+$", "", lora_path)
 
 
+def lora_folder(lora_name):
+    """Subfolder of a LoRA inside the loras folder with forward slashes, "" for the top level."""
+    path = lora_name.replace("\\", "/")
+    return path.rsplit("/", 1)[0] if "/" in path else ""
+
+
+def list_lora_folders(available_lora_names):
+    return sorted({lora_folder(lora_name) for lora_name in available_lora_names} - {""})
+
+
+def list_loras_in_folder(available_lora_names, folder):
+    """LoRAs directly inside the folder, not in its subfolders."""
+    return sorted(lora_name for lora_name in available_lora_names if lora_folder(lora_name) == folder)
+
+
 def resolve_lora_name(requested_name, available_lora_names):
     """Find the LoRA file a tag refers to. Accepts the subfolder path or just the
     file name, with or without extension, using either slash direction.

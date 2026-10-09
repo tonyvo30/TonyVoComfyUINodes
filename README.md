@@ -62,6 +62,9 @@ The character's trigger words are already in the `positive` output, so nothing e
 ### Keyword Match
 Outputs `matched` (true/false) and a `reason` using the same `match_any` / `require_all` / `exclude` logic as the rules. Connect `matched` to another node's `enabled` input to switch it on by keyword. Feed `text` from the `positive` output of Apply Keyword LoRAs so words added by rules count. Character selection no longer needs this: Apply Keyword LoRAs passes the selected character directly to the character loader.
 
+### Random LoRA
+Picks a random LoRA from a subfolder of the loras folder, e.g. `krea2/test`. Only LoRAs directly inside the folder are picked, not ones in its subfolders. `seed` makes the pick repeatable; set it to randomize to get a new pick each run. Connect `lora_name` to `character_override` on Apply Keyword LoRAs to force a random character. A LoRA with no Keyword Character is applied at strength 1 with no trigger words.
+
 ### Tests
 ```
 python -m unittest discover tests
