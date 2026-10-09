@@ -40,9 +40,9 @@ Takes the model, CLIP, prompts, rules and characters, and outputs the patched mo
 
 The `characters` input takes a chain of Keyword Character nodes. `character_override` forces the selection: `auto` picks the character by keywords, `none` disables characters, and a LoRA name forces the character that uses it (or a bare strength-1 selection if no Character node uses it). The selected character's trigger words are appended to the prompts, and its LoRA, strength and on/off state are passed out on `character_lora`, `character_strength` and `character_enabled`. When no character is selected the LoRA name is empty and `character_enabled` is false, so the character loader stays bypassed.
 
-`added_positive` and `added_negative` hold only the words the selected character and matched rules appended, comma separated and in the order they were added. Words skipped because the prompt already contained them are not included.
+`added_positive` and `added_negative` hold only the words the selected character and matched rules appended, comma separated and in the order they were added. Trigger words, and words skipped because the prompt already contained them, are not included.
 
-`trigger` holds the trigger words of the selected character and every matched rule, without duplicates. Unlike `added_positive`, it includes trigger words the prompt already contained.
+`trigger` holds the trigger words of the selected character and every matched rule, without duplicates. It includes trigger words the prompt already contained.
 
 To preview the final prompt on the canvas, connect the `positive`, `negative`, `added_positive`, `added_negative`, `trigger` or `report` outputs to a text display node such as ShowText (was-node-suite) or PreviewAny (Impact Pack).
 

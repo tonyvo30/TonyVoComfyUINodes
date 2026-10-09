@@ -169,6 +169,7 @@ class EvaluateTests(unittest.TestCase):
         rule = make_rule(match_any="ghibli", trigger="ghibli style", positive_append="soft light")
         result = evaluate_keyword_loras("ghibli landscape", "", (rule,), AVAILABLE_LORA_NAMES)
         self.assertEqual(result.positive, "ghibli landscape, ghibli style, soft light")
+        self.assertEqual(result.added_positive, "soft light")
         self.assertEqual(result.trigger, "ghibli style")
 
     def test_trigger_output_keeps_words_the_prompt_already_had(self):

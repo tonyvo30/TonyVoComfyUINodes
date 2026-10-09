@@ -253,7 +253,8 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
     def append_to_prompts(trigger, positive_append, negative_append):
         nonlocal positive, negative
         trigger_terms.extend(find_new_terms(", ".join(trigger_terms), trigger))
-        new_positive_terms = find_new_terms(positive, f"{trigger}, {positive_append}")
+        positive = append_terms(positive, find_new_terms(positive, trigger))
+        new_positive_terms = find_new_terms(positive, positive_append)
         new_negative_terms = find_new_terms(negative, negative_append)
         positive = append_terms(positive, new_positive_terms)
         negative = append_terms(negative, new_negative_terms)

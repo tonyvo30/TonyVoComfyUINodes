@@ -147,7 +147,7 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                 io.Float.Output(display_name="character_strength"),
                 io.Boolean.Output(display_name="character_enabled"),
                 io.String.Output(display_name="added_positive",
-                                 tooltip="Only the words appended to the positive prompt by the character and matched rules."),
+                                 tooltip="Only the words appended to the positive prompt by the character and matched rules, excluding trigger words."),
                 io.String.Output(display_name="added_negative",
                                  tooltip="Only the words appended to the negative prompt by the character and matched rules."),
                 io.String.Output(display_name="trigger",
