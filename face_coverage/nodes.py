@@ -8,6 +8,7 @@ from comfy_api.latest import io
 CATEGORY = "TonyVoNodes"
 
 folder_paths.add_model_folder_path("yunet", os.path.join(folder_paths.models_dir, "yunet"))
+folder_paths.folder_names_and_paths["yunet"][1].add(".onnx")
 
 # YuNet detects faces up to about 300 px; above that, close-up faces get boxes
 # that are too small or none at all. Coverage is a fraction, so detect on a
@@ -52,6 +53,6 @@ class FaceCoverageNode(io.ComfyNode):
     def execute(cls, image, model, score_threshold) -> io.NodeOutput:
         model_path = folder_paths.get_full_path_or_raise("yunet", model)
         detector = cv2.FaceDetectorYN.create(model_path, "", (320, 320), score_threshold)
-        images = (image.cpu().numpy() * 255).round().astype(np.uint8)[..., ::-1]
+        images = (image[..., :3].clamp(0, 1).cpu().numpy() * 255).round().astype(np.uint8)[..., ::-1]
         percents = [measure_face_coverage(detector, np.ascontiguousarray(bgr_image)) for bgr_image in images]
         return io.NodeOutput(float(np.mean(percents)))
