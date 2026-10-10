@@ -69,14 +69,14 @@ def split_terms(term_list_text):
     return [term.strip() for term in re.split(r"[,\n]", term_list_text) if term.strip()]
 
 
-def term_to_pattern(term):
+def term_to_regex_pattern(term):
     """Spaces and underscores in a term match any run of spaces/underscores, or none."""
     words = [re.escape(word) for word in re.split(r"[\s_]+", term) if word]
     return TERM_START_BOUNDARY + r"[\s_]*".join(words) + TERM_END_BOUNDARY
 
 
 def contains_term(text, term):
-    return re.search(term_to_pattern(term), text, re.IGNORECASE) is not None
+    return re.search(term_to_regex_pattern(term), text, re.IGNORECASE) is not None
 
 
 def find_first_contained_term(text, terms):
@@ -173,24 +173,24 @@ def resolve_lora_name(requested_name, available_lora_names):
     """Find the LoRA file a tag refers to. Accepts the subfolder path or just the
     file name, with or without extension, using either slash direction.
     Raises LookupError when nothing or more than one file matches."""
-    requested = normalize_lora_path(requested_name.strip())
-    requested_without_extension = remove_extension(requested)
-    has_subfolder = "/" in requested
+    normalized_requested_name = normalize_lora_path(requested_name.strip())
+    requested_name_without_extension = remove_extension(normalized_requested_name)
+    has_subfolder = "/" in normalized_requested_name
 
-    candidates = []
+    matching_lora_names = []
     for available_name in available_lora_names:
-        available = normalize_lora_path(available_name)
-        if requested in (available, remove_extension(available)):
+        normalized_available_name = normalize_lora_path(available_name)
+        if normalized_requested_name in (normalized_available_name, remove_extension(normalized_available_name)):
             return available_name
         if not has_subfolder:
-            file_name = available.rsplit("/", 1)[-1]
-            if requested_without_extension == remove_extension(file_name) or requested == file_name:
-                candidates.append(available_name)
+            file_name = normalized_available_name.rsplit("/", 1)[-1]
+            if requested_name_without_extension == remove_extension(file_name) or normalized_requested_name == file_name:
+                matching_lora_names.append(available_name)
 
-    if len(candidates) == 1:
-        return candidates[0]
-    if candidates:
-        raise LookupError(f'"{requested_name}" is ambiguous: {", ".join(candidates)}')
+    if len(matching_lora_names) == 1:
+        return matching_lora_names[0]
+    if matching_lora_names:
+        raise LookupError(f'"{requested_name}" is ambiguous: {", ".join(matching_lora_names)}')
     raise LookupError(f'"{requested_name}" not found in the loras folder')
 
 

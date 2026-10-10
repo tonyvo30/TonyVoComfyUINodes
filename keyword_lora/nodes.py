@@ -23,14 +23,11 @@ loaded_lora_files_by_path = {}
 
 def load_lora_file(lora_path, next_loaded_lora_files_by_path):
     modified_time = os.path.getmtime(lora_path)
-    cached_entry = loaded_lora_files_by_path.get(lora_path)
-    if cached_entry is not None and cached_entry[0] == modified_time:
-        lora_entry = cached_entry
-    else:
+    cached_modified_time, lora_state_dict, lora_metadata = loaded_lora_files_by_path.get(lora_path, (None, None, None))
+    if cached_modified_time != modified_time:
         lora_state_dict, lora_metadata = comfy.utils.load_torch_file(lora_path, safe_load=True, return_metadata=True)
-        lora_entry = (modified_time, lora_state_dict, lora_metadata)
-    next_loaded_lora_files_by_path[lora_path] = lora_entry
-    return lora_entry[1], lora_entry[2]
+    next_loaded_lora_files_by_path[lora_path] = (modified_time, lora_state_dict, lora_metadata)
+    return lora_state_dict, lora_metadata
 
 
 class KeywordLoraRuleNode(io.ComfyNode):

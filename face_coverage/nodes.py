@@ -16,7 +16,7 @@ folder_paths.folder_names_and_paths["yunet"][1].add(".onnx")
 DETECTION_LONG_SIDE = 640
 
 
-def measure_face_coverage(detector, image):
+def measure_face_coverage_percent(detector, image):
     """Percent of the image covered by detected face boxes, counting overlaps once."""
     scale = DETECTION_LONG_SIDE / max(image.shape[:2])
     if scale < 1:
@@ -24,11 +24,11 @@ def measure_face_coverage(detector, image):
     height, width = image.shape[:2]
     detector.setInputSize((width, height))
     _, faces = detector.detect(image)
-    face_pixels = np.zeros((height, width), dtype=bool)
+    face_pixel_mask = np.zeros((height, width), dtype=bool)
     for x, y, box_width, box_height in (faces[:, :4] if faces is not None else ()):
         left, top = max(int(x), 0), max(int(y), 0)
-        face_pixels[top:int(y + box_height), left:int(x + box_width)] = True
-    return face_pixels.mean() * 100.0
+        face_pixel_mask[top:int(y + box_height), left:int(x + box_width)] = True
+    return face_pixel_mask.mean() * 100.0
 
 
 class FaceCoverageNode(io.ComfyNode):
@@ -54,5 +54,5 @@ class FaceCoverageNode(io.ComfyNode):
         model_path = folder_paths.get_full_path_or_raise("yunet", model)
         detector = cv2.FaceDetectorYN.create(model_path, "", (320, 320), score_threshold)
         images = (image[..., :3].clamp(0, 1).cpu().numpy() * 255).round().astype(np.uint8)[..., ::-1]
-        percents = [measure_face_coverage(detector, np.ascontiguousarray(bgr_image)) for bgr_image in images]
-        return io.NodeOutput(float(np.mean(percents)))
+        coverage_percents = [measure_face_coverage_percent(detector, np.ascontiguousarray(bgr_image)) for bgr_image in images]
+        return io.NodeOutput(float(np.mean(coverage_percents)))
