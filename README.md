@@ -69,6 +69,11 @@ Outputs `matched` (true/false) and a `reason` using the same `match_any` / `requ
 ### Random LoRA
 Picks a random LoRA from a subfolder of the loras folder, e.g. `krea2/test`. Only LoRAs directly inside the folder are picked, not ones in its subfolders. `seed` makes the pick repeatable; set it to randomize to get a new pick each run. Connect `lora_name` to `character_override` on Apply Keyword LoRAs to force a random character. A LoRA with no Keyword Character is applied at strength 1 with no trigger words.
 
+# Face Coverage
+Detects faces with OpenCV YuNet and outputs `percent`, the share of the image covered by face boxes (overlapping boxes count once). For a batch it outputs the average. Boxes include a little hair and background around the face, so a tight close-up reads around 50%.
+
+Requires `opencv-python-headless` (in `requirements.txt`) and a YuNet model, e.g. `face_detection_yunet_2023mar.onnx` or `face_detection_yunet_2026may.onnx` from [opencv_zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet), placed in `models/yunet`. `score_threshold` is the minimum detection confidence.
+
 ### Tests
 ```
 python -m unittest discover tests

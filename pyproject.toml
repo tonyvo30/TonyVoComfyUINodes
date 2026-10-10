@@ -2,7 +2,7 @@
 name = "tonyvo-comfyui-nodes"
 description = "Apply LoRAs only when their keywords appear in the prompt."
 version = "2.0.0"
-dependencies = []
+dependencies = ["opencv-python-headless"]
 
 [project.urls]
 Repository = "https://github.com/tonyvo30/TonyVoComfyUINodes"
