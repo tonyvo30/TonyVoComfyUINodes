@@ -33,7 +33,7 @@ Defines a character selected by keywords, the same `match_any` / `require_all` /
 | `positive_append` / `negative_append` | Comma separated words appended to the prompts on a selection. |
 | `trigger` | Comma separated trigger words. Added to the positive prompt before `positive_append` on a selection, and passed out on the `trigger` output of Apply Keyword LoRAs. |
 
-Chain characters through `previous_characters`. Characters are checked before the rules, so a rule can match on a selected character's trigger word: e.g. a character appends `cristyren` and a later refusal-reduction rule matches on `cristyren`.
+Chain characters through `previous_characters`. Characters are checked before the rules, so a rule can match on a selected character's trigger word: e.g. a character appends `janedoe` and a later refusal-reduction rule matches on `janedoe`.
 
 ### Apply Keyword LoRAs
 Takes the model, CLIP, prompts, rules and characters, and outputs the patched model and CLIP, the final prompts and a report of what was applied or skipped and why.

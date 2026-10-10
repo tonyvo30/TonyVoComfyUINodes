@@ -88,7 +88,7 @@ class KeywordCharacterNode(io.ComfyNode):
                 io.Combo.Input("lora_name", options=folder_paths.get_filename_list("loras"),
                                tooltip="Character LoRA. Passed out of Apply Keyword LoRAs for a character loader such as Krea2T Character LoRA."),
                 io.Float.Input("strength", default=1.0, min=-100.0, max=100.0, step=0.01),
-                io.String.Input("match_any", multiline=True, placeholder="cristy",
+                io.String.Input("match_any", multiline=True, placeholder="jane",
                                 tooltip="Comma separated. The character is selected when any of these appear in the positive prompt."),
                 io.String.Input("require_all", multiline=True,
                                 tooltip="Comma separated. Every one of these must also appear."),
