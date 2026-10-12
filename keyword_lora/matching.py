@@ -9,6 +9,8 @@ from dataclasses import dataclass
 NO_LORA = "None"
 CHARACTER_AUTO = "auto"
 NO_CHARACTER = "none"
+CHARACTER_IMAGE_ONLY = "image only"
+CHARACTER_FULL_LORA = "full LoRA"
 
 # <lora:name>, <lora:name:strength> or <lora:name:model_strength:clip_strength>
 INLINE_LORA_TAG_PATTERN = re.compile(r"<lora:([^:<>]+)(?::([^:<>]*))?(?::([^:<>]*))?>", re.IGNORECASE)
@@ -42,6 +44,7 @@ class KeywordCharacter:
     positive_append: str = ""
     negative_append: str = ""
     trigger: str = ""
+    apply_as: str = CHARACTER_IMAGE_ONLY
 
 
 @dataclass(frozen=True)
@@ -213,8 +216,8 @@ def select_character(text, characters, character_override):
     if character_override != CHARACTER_AUTO:
         character = next((character for character in characters if character.lora_name == character_override), None)
         if character is None:
-            character = KeywordCharacter(character_override, 1.0)
-            return character, [f"character  {character_override}  strength 1  (override; no Character node uses this LoRA, nothing appended)"]
+            character = KeywordCharacter(character_override, 1.0, apply_as=CHARACTER_FULL_LORA)
+            return character, [f"character  {character_override}  strength 1  (override; no Character node uses this LoRA, applied as a full LoRA, nothing appended)"]
         return character, [f"character  {character.lora_name}  strength {format_strength(character.strength)}  (override)"]
 
     selected_character = None
@@ -240,8 +243,9 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
     Tags and rules are then applied in chain order, and each rule sees the
     words appended before it, so one rule's trigger words can set off a later
     rule. A LoRA is applied at most once: the first tag or rule that applies
-    it wins. The selected character's LoRA is never applied here; it is
-    returned for a dedicated character loader.
+    it wins, and the selected character's LoRA takes precedence over both.
+    A full LoRA character is applied here; an image only character is not,
+    and is returned for a dedicated character loader.
     """
     lora_applications = []
     report_lines = []
@@ -293,7 +297,11 @@ def evaluate_keyword_loras(positive, negative, rules, available_lora_names, char
     report_lines.extend(character_report_lines)
     if selected_character is not None:
         append_to_prompts(selected_character.trigger, selected_character.positive_append, selected_character.negative_append)
-        applied_lora_names.add(selected_character.lora_name)
+        if selected_character.apply_as == CHARACTER_FULL_LORA:
+            add_lora_application(LoraApplication(selected_character.lora_name, selected_character.strength,
+                                                 selected_character.strength, "character, full LoRA"))
+        else:
+            applied_lora_names.add(selected_character.lora_name)
 
     for tag_application in tag_applications:
         add_lora_application(tag_application)

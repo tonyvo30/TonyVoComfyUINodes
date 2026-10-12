@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "keyword_lora")
 
 from matching import (  # noqa: E402
     CHARACTER_AUTO,
+    CHARACTER_FULL_LORA,
     NO_CHARACTER,
     NO_LORA,
     KeywordCharacter,
@@ -260,10 +261,33 @@ class CharacterTests(unittest.TestCase):
         self.assertIsNone(result.selected_character)
         self.assertEqual(result.positive, "portrait of jane")
 
-    def test_override_without_character_node(self):
+    def test_override_without_character_node_applies_full_lora(self):
         result = self.evaluate("a woman", character_override="characters/other.safetensors")
         self.assertEqual(result.selected_character.lora_name, "characters/other.safetensors")
         self.assertEqual(result.positive, "a woman")
+        self.assertEqual([(application.lora_name, application.strength_model, application.strength_clip)
+                          for application in result.lora_applications], [("characters/other.safetensors", 1.0, 1.0)])
+
+    def test_full_lora_character_is_applied(self):
+        full_jane = KeywordCharacter("characters/jane.safetensors", 0.7, match_any="jane", apply_as=CHARACTER_FULL_LORA)
+        result = self.evaluate("portrait of jane", characters=(full_jane, JOHN))
+        self.assertEqual(result.selected_character, full_jane)
+        self.assertEqual([(application.lora_name, application.strength_model, application.strength_clip)
+                          for application in result.lora_applications], [("characters/jane.safetensors", 0.7, 0.7)])
+
+    def test_override_uses_matching_character_apply_as(self):
+        full_john = KeywordCharacter("characters/john.safetensors", 1.0, match_any="john", apply_as=CHARACTER_FULL_LORA)
+        result = self.evaluate("a woman", characters=(JANE, full_john), character_override="characters/john.safetensors")
+        self.assertEqual([application.lora_name for application in result.lora_applications], ["characters/john.safetensors"])
+        result = self.evaluate("a man", characters=(JANE, full_john), character_override="characters/jane.safetensors")
+        self.assertEqual(result.lora_applications, ())
+
+    def test_full_lora_character_wins_over_inline_tag_and_rule(self):
+        full_jane = KeywordCharacter("characters/jane.safetensors", 0.7, match_any="jane", apply_as=CHARACTER_FULL_LORA)
+        rule = make_rule("characters/jane.safetensors", match_any="jane")
+        result = self.evaluate("portrait of jane <lora:characters/jane.safetensors:0.5>", characters=(full_jane,), rules=(rule,))
+        self.assertEqual([(application.lora_name, application.strength_model) for application in result.lora_applications],
+                         [("characters/jane.safetensors", 0.7)])
 
     def test_rules_see_character_text(self):
         hair_rule = make_rule("textures/shiny_silk.safetensors", match_any="brunette")

@@ -5,7 +5,7 @@ Keyword-triggered LoRA loading and face coverage measurement for ComfyUI. All no
 | Node | Purpose |
 | --- | --- |
 | [Keyword LoRA Rule](#keyword-lora-rule) | Applies a LoRA only when its keywords appear in the prompt. |
-| [Keyword Character](#keyword-character) | Selects one character LoRA per prompt by keyword. |
+| [Keyword Character](#keyword-character) | Selects one character LoRA per prompt by keyword, applied image-only or as a full LoRA. |
 | [Apply Keyword LoRAs](#apply-keyword-loras) | Evaluates rules, characters and inline `<lora:...>` tags, and patches the model. |
 | [Keyword Match](#keyword-match) | Outputs true when keywords are found, to switch other nodes on. |
 | [Random LoRA](#random-lora) | Picks a random LoRA from a subfolder of the loras folder. |
@@ -37,7 +37,7 @@ The **Add Lora with String** node has been removed. It wrote `<lora:...>` string
 
 ## Keyword LoRAs
 
-Apply a LoRA only when its keywords appear in the prompt. Useful for LoRAs that teach one concept (a pose, an outfit, a style) but shift the whole model when loaded: they stay off until the prompt asks for them. Character LoRAs are selected the same way and passed to a dedicated image-only character loader.
+Apply a LoRA only when its keywords appear in the prompt. Useful for LoRAs that teach one concept (a pose, an outfit, a style) but shift the whole model when loaded: they stay off until the prompt asks for them. Character LoRAs are selected the same way, then either passed to a dedicated image-only character loader or applied as a normal LoRA.
 
 ### Keyword LoRA Rule
 One rule per LoRA. Chain rules through `previous_rules` and connect the last one to **Apply Keyword LoRAs**.
@@ -51,18 +51,24 @@ One rule per LoRA. Chain rules through `previous_rules` and connect the last one
 | `exclude` | Comma separated. No match if any of these appear. |
 | `positive_append` / `negative_append` | Comma separated words added to the prompts on a match. Words already present are skipped. |
 | `trigger` | Comma separated trigger words. Added to the positive prompt before `positive_append` on a match, and passed out on the `trigger` output of Apply Keyword LoRAs. |
+| `apply_as` | `image only` passes the LoRA to the character loader. `full LoRA` applies it to the model and CLIP like a normal LoRA. |
 
 Matching is case-insensitive and whole-word (`cat` does not match `category`, but does match `black_cat`). Spaces in a keyword also match underscores or no space, so `chicken jockey` matches `chicken_jockey` and `chickenjockey`. Prompt weights such as `(chicken jockey:1.2)` still match.
 
 Rules are evaluated in chain order and each rule sees the words added by the rules before it, so one rule can set off another. For example, a clothing rule appends its trigger word and a later texture rule matches on that trigger word.
 
 ### Keyword Character
-Defines a character selected by keywords, with the same `match_any` / `require_all` / `exclude` logic as the rules. Only one character is selected per prompt: the first in the chain that matches. When selected, its words are appended to the prompts and its LoRA and strength are passed out of **Apply Keyword LoRAs** for a dedicated character loader, e.g. [Krea2T Character LoRA — Image Only](https://github.com/capitan01R/ComfyUI-Krea2T-Enhancer#character-lora--image-only), which applies the character LoRA to image tokens only. Apply Keyword LoRAs never loads the character's LoRA itself, so a rule or inline tag for it does not apply it a second time.
+Defines a character selected by keywords, with the same `match_any` / `require_all` / `exclude` logic as the rules. Only one character is selected per prompt: the first in the chain that matches. When selected, its words are appended to the prompts and its LoRA is applied according to `apply_as`:
+
+- `image only`: the LoRA and strength are passed out of **Apply Keyword LoRAs** for a dedicated character loader, e.g. [Krea2T Character LoRA — Image Only](https://github.com/capitan01R/ComfyUI-Krea2T-Enhancer#character-lora--image-only), which applies the character LoRA to image tokens only.
+- `full LoRA`: Apply Keyword LoRAs loads the LoRA like a normal LoRA, at `strength` for both model and CLIP.
+
+Either way, a rule or inline tag for the selected character's LoRA does not apply it a second time.
 
 | Input | Meaning |
 | --- | --- |
 | `lora_name` | Character LoRA. Passed out of Apply Keyword LoRAs for the character loader. |
-| `strength` | Character LoRA strength for the character loader. |
+| `strength` | Character LoRA strength. |
 | `match_any` | Comma separated. The character is selected when any of these appear. |
 | `require_all` | Comma separated. Every one of these must also appear. |
 | `exclude` | Comma separated. Not selected if any of these appear. |
@@ -81,14 +87,14 @@ Applies inline tags and matched rules to the model and CLIP, selects the charact
 | `negative` | Optional negative prompt. |
 | `rules` | Optional chain of Keyword LoRA Rule nodes. |
 | `characters` | Optional chain of Keyword Character nodes. |
-| `character_override` | `auto` picks the character by keywords, `none` disables characters, and a LoRA name forces the character that uses it. A LoRA with no Keyword Character is selected at strength 1 with nothing appended. |
+| `character_override` | `auto` picks the character by keywords, `none` disables characters, and a LoRA name forces the character that uses it. A LoRA with no Keyword Character is applied as a full LoRA at strength 1 with nothing appended. |
 
 | Output | Meaning |
 | --- | --- |
 | `MODEL` / `CLIP` | Patched model and CLIP. |
 | `positive` / `negative` | Final prompts, with inline tags removed and all appended words added. |
 | `report` | What was applied, selected or skipped, and why. Also written to the log. |
-| `character_lora` / `character_strength` / `character_enabled` | The selected character's LoRA, strength and on/off state for the character loader. With no character selected, the LoRA name is empty and `character_enabled` is false, so the loader stays bypassed. |
+| `character_lora` / `character_strength` / `character_enabled` | The selected character's LoRA, strength and on/off state for the character loader. `character_enabled` is true only for an `image only` character. For a `full LoRA` character, which is already applied to `MODEL`, the strength is 0 and `character_enabled` is false. With no character selected, the LoRA name is also empty. In each of these cases the loader stays bypassed. |
 | `added_positive` / `added_negative` | Only the words the selected character and matched rules appended, in the order they were added. Trigger words, and words skipped because the prompt already had them, are not included. |
 | `trigger` | Trigger words of the selected character and every matched rule, without duplicates, including ones the prompt already contained. |
 
@@ -110,7 +116,7 @@ Krea2 model → Apply Keyword LoRAs → other LoRA loaders → Krea2T Character 
                      character_enabled → enabled
 ```
 
-The character's trigger words are already in the `positive` output, so nothing else is needed to prompt the character. The character's LoRA is loaded only by the Krea2T node, so a rule, an inline tag, or a Keyword Character override all land on the same image-only path.
+The character's trigger words are already in the `positive` output, so nothing else is needed to prompt the character. One wiring covers both modes: an `image only` character is loaded by the Krea2T node, and a `full LoRA` character is loaded by Apply Keyword LoRAs while the Krea2T node is bypassed. A rule or inline tag for the selected character's LoRA follows the character's `apply_as` instead of loading it again.
 
 ### Keyword Match
 Outputs `matched` (true/false) and a `reason` using the same `match_any` / `require_all` / `exclude` logic as the rules. Connect `matched` to another node's `enabled` input to switch it on by keyword. Feed `text` from the `positive` output of Apply Keyword LoRAs so words added by rules count. Inline `<lora:...>` tags in the text are ignored. For character LoRAs, use Keyword Character instead: Apply Keyword LoRAs passes the selected character to the character loader directly.

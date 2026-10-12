@@ -7,8 +7,9 @@ import comfy.utils
 import folder_paths
 from comfy_api.latest import io
 
-from .matching import (CHARACTER_AUTO, NO_CHARACTER, NO_LORA, KeywordCharacter, KeywordLoraRule, describe_keyword_match,
-                       evaluate_keyword_loras, list_lora_folders, list_loras_in_folder, strip_inline_lora_tags)
+from .matching import (CHARACTER_AUTO, CHARACTER_FULL_LORA, CHARACTER_IMAGE_ONLY, NO_CHARACTER, NO_LORA, KeywordCharacter,
+                       KeywordLoraRule, describe_keyword_match, evaluate_keyword_loras, list_lora_folders, list_loras_in_folder,
+                       strip_inline_lora_tags)
 
 KeywordLoraRules = io.Custom("TONYVO_KEYWORD_LORA_RULES")
 KeywordCharacters = io.Custom("TONYVO_KEYWORD_CHARACTERS")
@@ -83,7 +84,7 @@ class KeywordCharacterNode(io.ComfyNode):
                         "Apply Keyword LoRAs. Only one character is selected per prompt: the first that matches.",
             inputs=[
                 io.Combo.Input("lora_name", options=folder_paths.get_filename_list("loras"),
-                               tooltip="Character LoRA. Passed out of Apply Keyword LoRAs for a character loader such as Krea2T Character LoRA."),
+                               tooltip="Character LoRA."),
                 io.Float.Input("strength", default=1.0, min=-100.0, max=100.0, step=0.01),
                 io.String.Input("match_any", multiline=True, placeholder="jane",
                                 tooltip="Comma separated. The character is selected when any of these appear in the positive prompt."),
@@ -98,6 +99,10 @@ class KeywordCharacterNode(io.ComfyNode):
                 io.String.Input("trigger", multiline=True,
                                 tooltip="Comma separated trigger words. Appended to the positive prompt when this character is selected "
                                         "and also passed out on the trigger output of Apply Keyword LoRAs."),
+                io.Combo.Input("apply_as", options=[CHARACTER_IMAGE_ONLY, CHARACTER_FULL_LORA], default=CHARACTER_IMAGE_ONLY,
+                               tooltip="image only passes the LoRA out of Apply Keyword LoRAs for a character loader such as "
+                                       "Krea2T Character LoRA. full LoRA has Apply Keyword LoRAs load it like a normal LoRA, "
+                                       "at this strength for both model and clip."),
                 KeywordCharacters.Input("previous_characters", optional=True,
                                         tooltip="Characters earlier in the chain. They are checked before this one."),
             ],
@@ -105,9 +110,10 @@ class KeywordCharacterNode(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, lora_name, strength, match_any, require_all, exclude, positive_append, negative_append, trigger,
+    def execute(cls, lora_name, strength, match_any, require_all, exclude, positive_append, negative_append, trigger, apply_as,
                 previous_characters=None) -> io.NodeOutput:
-        character = KeywordCharacter(lora_name, strength, match_any, require_all, exclude, positive_append, negative_append, trigger)
+        character = KeywordCharacter(lora_name, strength, match_any, require_all, exclude, positive_append, negative_append, trigger,
+                                     apply_as)
         return io.NodeOutput((previous_characters or ()) + (character,))
 
 
@@ -132,7 +138,8 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                 io.Combo.Input("character_override", options=[CHARACTER_AUTO, NO_CHARACTER] + folder_paths.get_filename_list("loras"),
                                default=CHARACTER_AUTO,
                                tooltip="auto picks the character by keywords. none disables characters. "
-                                       "Choosing a LoRA forces the Keyword Character that uses it."),
+                                       "Choosing a LoRA forces the Keyword Character that uses it, or applies it as a full LoRA "
+                                       "at strength 1 if no Keyword Character uses it."),
             ],
             outputs=[
                 io.Model.Output(display_name="MODEL"),
@@ -142,7 +149,9 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                 io.String.Output(display_name="report"),
                 io.AnyType.Output(display_name="character_lora"),
                 io.Float.Output(display_name="character_strength"),
-                io.Boolean.Output(display_name="character_enabled"),
+                io.Boolean.Output(display_name="character_enabled",
+                                  tooltip="True only for an image only character. A full LoRA character is already applied to MODEL, "
+                                          "so this is false and character_strength is 0."),
                 io.String.Output(display_name="added_positive",
                                  tooltip="Only the words appended to the positive prompt by the character and matched rules, excluding trigger words."),
                 io.String.Output(display_name="added_negative",
@@ -169,8 +178,10 @@ class ApplyKeywordLorasNode(io.ComfyNode):
         report = "\n".join(result.report_lines) or "no inline tags or rules"
         logging.info("[Apply Keyword LoRAs]\n%s", report)
         character = result.selected_character
+        character_loader_enabled = character is not None and character.apply_as == CHARACTER_IMAGE_ONLY
         return io.NodeOutput(model, clip, result.positive, result.negative, report,
-                             character.lora_name if character else "", character.strength if character else 0.0, character is not None,
+                             character.lora_name if character else "", character.strength if character_loader_enabled else 0.0,
+                             character_loader_enabled,
                              result.added_positive, result.added_negative, result.trigger)
 
 
