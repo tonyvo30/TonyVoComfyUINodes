@@ -1,6 +1,6 @@
 # Tony Vo ComfyUI Nodes
 
-Keyword-triggered LoRA loading and face coverage measurement for ComfyUI. All nodes are in the `TonyVoNodes` category.
+Keyword-triggered LoRA loading, slider LoRA controls and face coverage measurement for ComfyUI. All nodes are in the `TonyVoNodes` category.
 
 | Node | Purpose |
 | --- | --- |
@@ -9,6 +9,8 @@ Keyword-triggered LoRA loading and face coverage measurement for ComfyUI. All no
 | [Apply Keyword LoRAs](#apply-keyword-loras) | Evaluates rules, characters and inline `<lora:...>` tags, and patches the model. |
 | [Keyword Match](#keyword-match) | Outputs true when keywords are found, to switch other nodes on. |
 | [LoRA Picker](#lora-picker) | Picks a specific or random LoRA from one folder of the loras folder. |
+| [Slider LoRA Definition](#slider-lora-definition) | Describes a slider LoRA: its usable strength range and what each end does. |
+| [Apply Slider LoRAs](#apply-slider-loras) | Shows a slider for each chained definition and applies the LoRAs to the model. |
 | [Face Coverage](#face-coverage) | Outputs the percent of an image covered by detected faces. |
 
 ## Installation
@@ -130,6 +132,35 @@ Picks a LoRA from one folder of the loras folder. Choose a `folder`, e.g. `chara
 `seed` makes a random pick repeatable; set it to randomize to get a new pick each run. Connect `lora_name` to `character_override` on Apply Keyword LoRAs to choose the character. New LoRAs appear after refreshing node definitions (press R).
 
 This node replaces **Random LoRA**. Workflows that use it show it as a missing node; replace it with LoRA Picker.
+
+## Slider LoRAs
+
+Slider LoRAs push one trait in either direction, e.g. less or more skin detail, by strength alone. Describe each one once with a **Slider LoRA Definition**, chain the definitions, and set all the strengths from one panel on **Apply Slider LoRAs**.
+
+```
+Slider LoRA Definition → Slider LoRA Definition → … → Apply Slider LoRAs (sliders)
+model → Apply Slider LoRAs (model) → MODEL → sampler
+```
+
+### Slider LoRA Definition
+| Input | Meaning |
+| --- | --- |
+| `lora_name` | The slider LoRA. |
+| `min_strength` / `max_strength` | The usable strength range. Becomes the range of its slider. |
+| `min_label` / `max_label` | What the LoRA does toward each end, e.g. `smooth` and `detailed`. |
+| `previous_sliders` | Definitions earlier in the chain. |
+
+Give a definition a title (double-click its header) to name its slider; otherwise the slider is named after the LoRA file. The strength is set on Apply Slider LoRAs and saved with the definition, so it follows the definition when you reorder, copy or move it into a subgraph.
+
+### Apply Slider LoRAs
+Shows one slider per connected definition, labeled `name (min_label ↔ max_label)`, and applies each LoRA to the model at its slider's strength. Drag a slider or type an exact value in its number box; typed values are kept within the definition's range. A slider at 0 is skipped, so type 0 to turn a LoRA off. The sliders follow the chain as you connect, reorder, bypass or delete definitions, including through reroutes and subgraphs. Order does not change the result.
+
+| Output | Meaning |
+| --- | --- |
+| `MODEL` | The model with the slider LoRAs applied. CLIP is not patched. |
+| `report` | Each slider's strength and range, marking strengths outside the range. Also written to the log. |
+
+The sliders stop at the first node in the chain that is not a definition, such as a switch. Definitions above it are still applied at their last strength but have no slider, so keep the chain to definitions, reroutes and subgraphs. The sliders also cannot follow a chain into an Apply Slider LoRAs inside a subgraph that is used more than once.
 
 ## Face Coverage
 Detects faces with OpenCV YuNet and outputs `percent`, the share of the image covered by face boxes (overlapping boxes count once). For a batch it outputs the average. Boxes include a little hair and background around the face, so a tight close-up reads around 50%.

@@ -82,6 +82,19 @@ function rowLabel(row) {
     return `${row.title}  (${row.minLabel} ↔ ${row.maxLabel})`;
 }
 
+function rowTooltip(row) {
+    return `${row.title}: ${row.minLabel} at ${row.minStrength}, ${row.maxLabel} at ${row.maxStrength}. 0 turns it off.`;
+}
+
+const labelMeasuringContext = document.createElement("canvas").getContext("2d");
+labelMeasuringContext.font = "12px sans-serif";
+// Room the slider and its number box take next to the label.
+const SLIDER_CONTROL_WIDTH = 190;
+
+function widthToFitLabels(rows) {
+    return Math.max(0, ...rows.map((row) => labelMeasuringContext.measureText(rowLabel(row)).width)) + SLIDER_CONTROL_WIDTH;
+}
+
 // Each row edits the hidden strength widget of its definition, so the strength travels with the definition
 // through reordering, copy and paste, and subgraphs.
 function refreshSliderRows(applyNode) {
@@ -111,9 +124,10 @@ function refreshSliderRows(applyNode) {
         const widget = applyNode.addWidget("slider", ROW_WIDGET_PREFIX + row.definitionId, strengthWidget.value, setStrength,
             { min: row.minStrength, max: row.maxStrength, step: 0.01, precision: 2, serialize: false });
         widget.label = rowLabel(row);
+        widget.tooltip = rowTooltip(row);
         widget.serialize = false;
     }
-    applyNode.setSize([applyNode.size[0], applyNode.computeSize()[1]]);
+    applyNode.setSize([Math.max(applyNode.size[0], widthToFitLabels(rows)), applyNode.computeSize()[1]]);
     applyNode.setDirtyCanvas(true, true);
 }
 
