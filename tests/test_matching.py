@@ -357,6 +357,11 @@ class PickLoraTests(unittest.TestCase):
                          "characters\\jane\\v1.safetensors")
         self.assertEqual(random_generator.offered_choices, [])
 
+    def test_none_choice_passes_through(self):
+        random_generator = FirstChoiceRandom()
+        self.assertEqual(pick_lora(self.LORA_NAMES, "styles", NO_CHARACTER, random_generator), NO_CHARACTER)
+        self.assertEqual(random_generator.offered_choices, [])
+
     def test_missing_specific_choice_raises(self):
         with self.assertRaises(LookupError):
             pick_lora(self.LORA_NAMES, "characters", "anna.safetensors", random.Random(0))

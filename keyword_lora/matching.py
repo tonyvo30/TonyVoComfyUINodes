@@ -188,7 +188,10 @@ def lora_names_under_folder(available_lora_names, folder):
 def pick_lora(available_lora_names, folder, lora_choice, random_generator):
     """Resolve a LoRA Picker choice: a path relative to the folder, RANDOM_LORA for any LoRA under it, or
     RANDOM_LORA_ONE_SUBFOLDER_FIRST to pick a first level subfolder with equal chance and then a LoRA inside it.
-    LoRAs directly inside the folder count as one more subfolder. Raises LookupError when nothing can be picked."""
+    LoRAs directly inside the folder count as one more subfolder. NO_CHARACTER is passed through, so the pick
+    can turn off characters on Apply Keyword LoRAs. Raises LookupError when nothing can be picked."""
+    if lora_choice == NO_CHARACTER:
+        return NO_CHARACTER
     lora_names_by_relative_path = lora_names_under_folder(available_lora_names, folder)
     if lora_choice == RANDOM_LORA:
         candidate_paths = sorted(lora_names_by_relative_path)

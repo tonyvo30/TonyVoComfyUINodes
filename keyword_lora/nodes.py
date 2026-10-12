@@ -229,12 +229,13 @@ class LoraPickerNode(io.ComfyNode):
             inputs=[
                 io.DynamicCombo.Input("folder", options=[
                     io.DynamicCombo.Option(folder, [
-                        io.Combo.Input("lora", options=[RANDOM_LORA, RANDOM_LORA_ONE_SUBFOLDER_FIRST]
+                        io.Combo.Input("lora", options=[RANDOM_LORA, RANDOM_LORA_ONE_SUBFOLDER_FIRST, NO_CHARACTER]
                                        + sorted(lora_names_under_folder(lora_names, folder)),
                                        tooltip="A LoRA in this folder or its subfolders. random gives every LoRA an equal chance. "
                                                "random, one subfolder first picks one subfolder with equal chance, then a LoRA inside it, "
                                                "so a subfolder with many LoRAs is not favored. LoRAs directly inside the folder count "
-                                               "as one more subfolder."),
+                                               "as one more subfolder. none outputs none, which turns off "
+                                               "characters on Apply Keyword LoRAs."),
                     ]) for folder in [ALL_LORAS_FOLDER] + list_lora_folders(lora_names)
                 ], tooltip="Folder inside the loras folder. Only its LoRAs are listed. (all) lists every LoRA."),
                 io.Int.Input("seed", default=0, min=0, max=0xffffffffffffffff, control_after_generate=True,

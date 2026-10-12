@@ -128,6 +128,7 @@ Picks a LoRA from one folder of the loras folder. Choose a `folder`, e.g. `chara
 
 - `random`: every LoRA under the folder, each with an equal chance.
 - `random, one subfolder first`: picks one subfolder with equal chance, then a LoRA anywhere inside it. With 8 LoRAs in `characters/jane/` and 1 in `characters/anna/`, each character is picked half the time. LoRAs directly inside the folder count as one more subfolder.
+- `none`: outputs `none`, which turns characters off when connected to `character_override`. Useful when the picker feeds a subgraph input and some uses of the subgraph have no character.
 
 `seed` makes a random pick repeatable; set it to randomize to get a new pick each run. Connect `lora_name` to `character_override` on Apply Keyword LoRAs to choose the character. New LoRAs appear after refreshing node definitions (press R).
 
