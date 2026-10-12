@@ -121,11 +121,18 @@ function refreshSliderRows(applyNode) {
             strengthWidget.value = Math.round(strength * 100) / 100;
             definitions[rowIndex].setDirtyCanvas(true, false);
         };
-        const widget = applyNode.addWidget("slider", ROW_WIDGET_PREFIX + row.definitionId, strengthWidget.value, setStrength,
-            { min: row.minStrength, max: row.maxStrength, step: 0.01, precision: 2, serialize: false });
-        widget.label = rowLabel(row);
-        widget.tooltip = rowTooltip(row);
-        widget.serialize = false;
+        // Label and tooltip go in at creation: Vue nodes read the widget when it is added and miss later assignments.
+        applyNode.addCustomWidget({
+            type: "slider",
+            name: ROW_WIDGET_PREFIX + row.definitionId,
+            value: strengthWidget.value,
+            callback: setStrength,
+            options: { min: row.minStrength, max: row.maxStrength, step: 0.01, precision: 2, serialize: false },
+            y: 0,
+            label: rowLabel(row),
+            tooltip: rowTooltip(row),
+            serialize: false,
+        });
     }
     applyNode.setSize([Math.max(applyNode.size[0], widthToFitLabels(rows)), applyNode.computeSize()[1]]);
     applyNode.setDirtyCanvas(true, true);
