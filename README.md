@@ -8,7 +8,7 @@ Keyword-triggered LoRA loading and face coverage measurement for ComfyUI. All no
 | [Keyword Character](#keyword-character) | Selects one character LoRA per prompt by keyword, applied image-only or as a full LoRA. |
 | [Apply Keyword LoRAs](#apply-keyword-loras) | Evaluates rules, characters and inline `<lora:...>` tags, and patches the model. |
 | [Keyword Match](#keyword-match) | Outputs true when keywords are found, to switch other nodes on. |
-| [Random LoRA](#random-lora) | Picks a random LoRA from a subfolder of the loras folder. |
+| [LoRA Picker](#lora-picker) | Picks a specific or random LoRA from one folder of the loras folder. |
 | [Face Coverage](#face-coverage) | Outputs the percent of an image covered by detected faces. |
 
 ## Installation
@@ -121,8 +121,15 @@ The character's trigger words are already in the `positive` output, so nothing e
 ### Keyword Match
 Outputs `matched` (true/false) and a `reason` using the same `match_any` / `require_all` / `exclude` logic as the rules. Connect `matched` to another node's `enabled` input to switch it on by keyword. Feed `text` from the `positive` output of Apply Keyword LoRAs so words added by rules count. Inline `<lora:...>` tags in the text are ignored. For character LoRAs, use Keyword Character instead: Apply Keyword LoRAs passes the selected character to the character loader directly.
 
-### Random LoRA
-Picks a random LoRA from a subfolder of the loras folder, e.g. `characters/test`. Only LoRAs directly inside the folder are picked, not ones in its subfolders. `seed` makes the pick repeatable; set it to randomize to get a new pick each run. Connect `lora_name` to `character_override` on Apply Keyword LoRAs to force a random character.
+### LoRA Picker
+Picks a LoRA from one folder of the loras folder. Choose a `folder`, e.g. `characters`, and the `lora` list shows only the LoRAs in it and its subfolders, relative to that folder. `(all)` lists every LoRA. Besides a specific LoRA, `lora` can be:
+
+- `random`: every LoRA under the folder, each with an equal chance.
+- `random, one subfolder first`: picks one subfolder with equal chance, then a LoRA anywhere inside it. With 8 LoRAs in `characters/jane/` and 1 in `characters/anna/`, each character is picked half the time. LoRAs directly inside the folder count as one more subfolder.
+
+`seed` makes a random pick repeatable; set it to randomize to get a new pick each run. Connect `lora_name` to `character_override` on Apply Keyword LoRAs to choose the character. New LoRAs appear after refreshing node definitions (press R).
+
+This node replaces **Random LoRA**. Workflows that use it show it as a missing node; replace it with LoRA Picker.
 
 ## Face Coverage
 Detects faces with OpenCV YuNet and outputs `percent`, the share of the image covered by face boxes (overlapping boxes count once). For a batch it outputs the average. Boxes include a little hair and background around the face, so a tight close-up reads around 50%.

@@ -11,6 +11,9 @@ CHARACTER_AUTO = "auto"
 NO_CHARACTER = "none"
 CHARACTER_IMAGE_ONLY = "image only"
 CHARACTER_FULL_LORA = "full LoRA"
+ALL_LORAS_FOLDER = "(all)"
+RANDOM_LORA = "random"
+RANDOM_LORA_ONE_SUBFOLDER_FIRST = "random, one subfolder first"
 
 # <lora:name>, <lora:name:strength> or <lora:name:model_strength:clip_strength>
 INLINE_LORA_TAG_PATTERN = re.compile(r"<lora:([^:<>]+)(?::([^:<>]*))?(?::([^:<>]*))?>", re.IGNORECASE)
@@ -164,12 +167,43 @@ def lora_folder(lora_name):
 
 
 def list_lora_folders(available_lora_names):
-    return sorted({lora_folder(lora_name) for lora_name in available_lora_names} - {""})
+    """Every folder that holds a LoRA, directly or in a subfolder."""
+    folders = set()
+    for lora_name in available_lora_names:
+        folder = lora_folder(lora_name)
+        while folder:
+            folders.add(folder)
+            folder = lora_folder(folder)
+    return sorted(folders)
 
 
-def list_loras_in_folder(available_lora_names, folder):
-    """LoRAs directly inside the folder, not in its subfolders."""
-    return sorted(lora_name for lora_name in available_lora_names if lora_folder(lora_name) == folder)
+def lora_names_under_folder(available_lora_names, folder):
+    """LoRAs anywhere under the folder, as {path relative to the folder with forward slashes: LoRA name}.
+    ALL_LORAS_FOLDER covers the whole loras folder."""
+    prefix = "" if folder == ALL_LORAS_FOLDER else folder + "/"
+    return {path[len(prefix):]: lora_name for lora_name in available_lora_names
+            if (path := lora_name.replace("\\", "/")).startswith(prefix)}
+
+
+def pick_lora(available_lora_names, folder, lora_choice, random_generator):
+    """Resolve a LoRA Picker choice: a path relative to the folder, RANDOM_LORA for any LoRA under it, or
+    RANDOM_LORA_ONE_SUBFOLDER_FIRST to pick a first level subfolder with equal chance and then a LoRA inside it.
+    LoRAs directly inside the folder count as one more subfolder. Raises LookupError when nothing can be picked."""
+    lora_names_by_relative_path = lora_names_under_folder(available_lora_names, folder)
+    if lora_choice == RANDOM_LORA:
+        candidate_paths = sorted(lora_names_by_relative_path)
+    elif lora_choice == RANDOM_LORA_ONE_SUBFOLDER_FIRST:
+        paths_by_subfolder = {}
+        for relative_path in sorted(lora_names_by_relative_path):
+            paths_by_subfolder.setdefault(relative_path.split("/", 1)[0] if "/" in relative_path else "", []).append(relative_path)
+        candidate_paths = paths_by_subfolder[random_generator.choice(sorted(paths_by_subfolder))] if paths_by_subfolder else []
+    elif lora_choice in lora_names_by_relative_path:
+        return lora_names_by_relative_path[lora_choice]
+    else:
+        raise LookupError(f'LoRA "{lora_choice}" not found in "{folder}"')
+    if not candidate_paths:
+        raise LookupError(f'No LoRAs found in "{folder}"')
+    return lora_names_by_relative_path[random_generator.choice(candidate_paths)]
 
 
 def resolve_lora_name(requested_name, available_lora_names):

@@ -1,16 +1,20 @@
 """Run from the repo root: python -m unittest discover tests"""
 
 import os
+import random
 import sys
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "keyword_lora"))
 
 from matching import (  # noqa: E402
+    ALL_LORAS_FOLDER,
     CHARACTER_AUTO,
     CHARACTER_FULL_LORA,
     NO_CHARACTER,
     NO_LORA,
+    RANDOM_LORA,
+    RANDOM_LORA_ONE_SUBFOLDER_FIRST,
     KeywordCharacter,
     KeywordLoraRule,
     append_terms,
@@ -20,7 +24,8 @@ from matching import (  # noqa: E402
     evaluate_keyword_loras,
     find_new_terms,
     list_lora_folders,
-    list_loras_in_folder,
+    lora_names_under_folder,
+    pick_lora,
     resolve_lora_name,
     split_terms,
     strip_inline_lora_tags,
@@ -313,9 +318,74 @@ class LoraFolderTests(unittest.TestCase):
     def test_lists_folders_that_contain_loras(self):
         self.assertEqual(list_lora_folders(self.LORA_NAMES), ["pack", "pack/test", "pack/test/nested"])
 
-    def test_lists_only_direct_children_with_either_slash(self):
-        self.assertEqual(list_loras_in_folder(self.LORA_NAMES, "pack/test"),
-                         ["pack/test/mary.safetensors", "pack\\test\\jane.safetensors"])
+    def test_lists_folders_that_only_contain_subfolders(self):
+        self.assertEqual(list_lora_folders(["characters/jane/v1.safetensors"]), ["characters", "characters/jane"])
+
+    def test_lists_loras_under_folder_by_relative_path_with_either_slash(self):
+        self.assertEqual(lora_names_under_folder(self.LORA_NAMES, "pack/test"), {
+            "jane.safetensors": "pack\\test\\jane.safetensors",
+            "mary.safetensors": "pack/test/mary.safetensors",
+            "nested/other.safetensors": "pack/test/nested/other.safetensors",
+        })
+
+    def test_does_not_match_folders_sharing_a_prefix(self):
+        self.assertEqual(lora_names_under_folder(["pack/a.safetensors", "package/b.safetensors"], "pack"),
+                         {"a.safetensors": "pack/a.safetensors"})
+
+    def test_all_folder_lists_every_lora(self):
+        self.assertEqual(sorted(lora_names_under_folder(self.LORA_NAMES, ALL_LORAS_FOLDER).values()), sorted(self.LORA_NAMES))
+
+
+class FirstChoiceRandom:
+    """Stand-in for random.Random that always picks the first item and records what it was offered."""
+
+    def __init__(self):
+        self.offered_choices = []
+
+    def choice(self, sequence):
+        self.offered_choices.append(list(sequence))
+        return sequence[0]
+
+
+class PickLoraTests(unittest.TestCase):
+    LORA_NAMES = ["characters\\jane\\v1.safetensors", "characters/jane/v2.safetensors", "characters/jane/v3.safetensors",
+                  "characters/mia/v1.safetensors", "characters/solo.safetensors"]
+
+    def test_specific_choice_returns_the_original_lora_name(self):
+        random_generator = FirstChoiceRandom()
+        self.assertEqual(pick_lora(self.LORA_NAMES, "characters", "jane/v1.safetensors", random_generator),
+                         "characters\\jane\\v1.safetensors")
+        self.assertEqual(random_generator.offered_choices, [])
+
+    def test_missing_specific_choice_raises(self):
+        with self.assertRaises(LookupError):
+            pick_lora(self.LORA_NAMES, "characters", "anna.safetensors", random.Random(0))
+
+    def test_random_pools_every_lora_under_the_folder(self):
+        random_generator = FirstChoiceRandom()
+        pick_lora(self.LORA_NAMES, "characters", RANDOM_LORA, random_generator)
+        self.assertEqual(random_generator.offered_choices, [["jane/v1.safetensors", "jane/v2.safetensors", "jane/v3.safetensors",
+                                                             "mia/v1.safetensors", "solo.safetensors"]])
+
+    def test_one_subfolder_first_picks_a_subfolder_then_a_lora_inside_it(self):
+        random_generator = FirstChoiceRandom()
+        self.assertEqual(pick_lora(self.LORA_NAMES, "characters", RANDOM_LORA_ONE_SUBFOLDER_FIRST, random_generator),
+                         "characters/solo.safetensors")
+        self.assertEqual(random_generator.offered_choices, [["", "jane", "mia"], ["solo.safetensors"]])
+
+    def test_one_subfolder_first_gives_each_subfolder_an_equal_chance(self):
+        picked_subfolders = [pick_lora(self.LORA_NAMES, "characters", RANDOM_LORA_ONE_SUBFOLDER_FIRST, random.Random(seed))
+                             .replace("\\", "/").split("/")[1] for seed in range(3000)]
+        for subfolder in ("jane", "mia", "solo.safetensors"):
+            self.assertAlmostEqual(picked_subfolders.count(subfolder) / 3000, 1 / 3, delta=0.05)
+
+    def test_same_seed_gives_same_pick(self):
+        picks = {pick_lora(self.LORA_NAMES, "characters", RANDOM_LORA, random.Random(42)) for _ in range(5)}
+        self.assertEqual(len(picks), 1)
+
+    def test_random_from_empty_folder_raises(self):
+        with self.assertRaises(LookupError):
+            pick_lora(self.LORA_NAMES, "styles", RANDOM_LORA_ONE_SUBFOLDER_FIRST, random.Random(0))
 
 
 if __name__ == "__main__":
