@@ -78,21 +78,36 @@ function sliderRow(definition) {
     };
 }
 
-function rowLabel(row) {
-    return `${row.title}  (${row.minLabel} ↔ ${row.maxLabel})`;
-}
-
 function rowTooltip(row) {
     return `${row.title}: ${row.minLabel} at ${row.minStrength}, ${row.maxLabel} at ${row.maxStrength}. 0 turns it off.`;
 }
 
+// Same font as widget labels in Vue nodes.
 const labelMeasuringContext = document.createElement("canvas").getContext("2d");
-labelMeasuringContext.font = "12px sans-serif";
+labelMeasuringContext.font = "12px Inter, Arial, sans-serif";
 // Room the slider and its number box take next to the label.
 const SLIDER_CONTROL_WIDTH = 190;
+const MIN_NAME_TO_LEGEND_GAP = 12;
+// Labels are plain text, so the gap is filled with spaces the label does not collapse: no-break spaces, then
+// hair spaces to get within a pixel.
+const NO_BREAK_SPACE = " ";
+const HAIR_SPACE = " ";
 
-function widthToFitLabels(rows) {
-    return Math.max(0, ...rows.map((row) => labelMeasuringContext.measureText(rowLabel(row)).width)) + SLIDER_CONTROL_WIDTH;
+function textWidth(text) {
+    return labelMeasuringContext.measureText(text).width;
+}
+
+// Pads every label to the same width so each legend ends next to its slider and the names stay left aligned.
+function rowLabels(rows) {
+    const legends = rows.map((row) => `(${row.minLabel} ↔ ${row.maxLabel})`);
+    const contentWidths = rows.map((row, rowIndex) => textWidth(row.title) + textWidth(legends[rowIndex]));
+    const labelWidth = Math.max(...contentWidths) + MIN_NAME_TO_LEGEND_GAP;
+    return rows.map((row, rowIndex) => {
+        const gapWidth = labelWidth - contentWidths[rowIndex];
+        const noBreakSpaceCount = Math.floor(gapWidth / textWidth(NO_BREAK_SPACE));
+        const hairSpaceCount = Math.round((gapWidth - noBreakSpaceCount * textWidth(NO_BREAK_SPACE)) / textWidth(HAIR_SPACE));
+        return row.title + NO_BREAK_SPACE.repeat(noBreakSpaceCount) + HAIR_SPACE.repeat(hairSpaceCount) + legends[rowIndex];
+    });
 }
 
 // Each row edits the hidden strength widget of its definition, so the strength travels with the definition
@@ -115,6 +130,7 @@ function refreshSliderRows(applyNode) {
             applyNode.removeWidget(widget);
         }
     }
+    const labels = rowLabels(rows);
     for (const [rowIndex, row] of rows.entries()) {
         const strengthWidget = findWidget(definitions[rowIndex], "strength");
         const setStrength = (strength) => {
@@ -129,12 +145,13 @@ function refreshSliderRows(applyNode) {
             callback: setStrength,
             options: { min: row.minStrength, max: row.maxStrength, step: 0.01, precision: 2, serialize: false },
             y: 0,
-            label: rowLabel(row),
+            label: labels[rowIndex],
             tooltip: rowTooltip(row),
             serialize: false,
         });
     }
-    applyNode.setSize([Math.max(applyNode.size[0], widthToFitLabels(rows)), applyNode.computeSize()[1]]);
+    const widthToFitLabels = Math.max(0, ...labels.map(textWidth)) + SLIDER_CONTROL_WIDTH;
+    applyNode.setSize([Math.max(applyNode.size[0], widthToFitLabels), applyNode.computeSize()[1]]);
     applyNode.setDirtyCanvas(true, true);
 }
 
