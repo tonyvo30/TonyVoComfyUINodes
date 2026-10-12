@@ -18,6 +18,10 @@ class DescribeSliderTests(unittest.TestCase):
         definition = SliderDefinition("age.safetensors", 0.0, -2.0, 2.0)
         self.assertEqual(describe_slider(definition), "age.safetensors: 0 (-2 .. 2)")
 
+    def test_uses_display_name(self):
+        definition = SliderDefinition("skin_detail.safetensors", 1.2, -3.0, 2.5, "smooth", "detailed", "Skin detail")
+        self.assertEqual(describe_slider(definition), "Skin detail: 1.2 (smooth -3 .. 2.5 detailed)")
+
     def test_flags_strength_outside_range(self):
         definition = SliderDefinition("age.safetensors", 3.0, -2.0, 2.0)
         self.assertTrue(describe_slider(definition).endswith(" outside range"))

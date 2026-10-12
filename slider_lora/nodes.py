@@ -33,14 +33,17 @@ class SliderLoraDefinitionNode(io.ComfyNode):
                                 tooltip="What the LoRA does toward max_strength, e.g. detailed."),
                 io.Float.Input("strength", default=0.0, min=-100.0, max=100.0, step=0.01, socketless=True,
                                tooltip="Set by this definition's slider on Apply Slider LoRAs."),
+                io.String.Input("display_name", default="", socketless=True, optional=True,
+                                tooltip="Name of this slider on Apply Slider LoRAs. Empty uses the LoRA file name."),
                 SliderLoras.Input("previous_sliders", optional=True, tooltip="Definitions earlier in the chain."),
             ],
             outputs=[SliderLoras.Output(display_name="sliders")],
         )
 
     @classmethod
-    def execute(cls, lora_name, min_strength, max_strength, min_label, max_label, strength, previous_sliders=None) -> io.NodeOutput:
-        definition = SliderDefinition(lora_name, strength, min_strength, max_strength, min_label, max_label)
+    def execute(cls, lora_name, min_strength, max_strength, min_label, max_label, strength, display_name="",
+                previous_sliders=None) -> io.NodeOutput:
+        definition = SliderDefinition(lora_name, strength, min_strength, max_strength, min_label, max_label, display_name)
         return io.NodeOutput((previous_sliders or ()) + (definition,))
 
 

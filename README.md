@@ -149,9 +149,10 @@ model → Apply Slider LoRAs (model) → MODEL → sampler
 | `lora_name` | The slider LoRA. |
 | `min_strength` / `max_strength` | The usable strength range. Becomes the range of its slider. |
 | `min_label` / `max_label` | What the LoRA does toward each end, e.g. `smooth` and `detailed`. |
+| `display_name` | Name of its slider on Apply Slider LoRAs and in the report. Empty uses the LoRA file name. |
 | `previous_sliders` | Definitions earlier in the chain. |
 
-Give a definition a title (double-click its header) to name its slider; otherwise the slider is named after the LoRA file. The strength is set on Apply Slider LoRAs and saved with the definition, so it follows the definition when you reorder, copy or move it into a subgraph.
+The strength is set on Apply Slider LoRAs and saved with the definition, so it follows the definition when you reorder, copy or move it into a subgraph.
 
 ### Apply Slider LoRAs
 Shows one slider per connected definition, labeled `name (min_label ↔ max_label)`, and applies each LoRA to the model at its slider's strength. Drag a slider or type an exact value in its number box; typed values are kept within the definition's range. A slider at 0 is skipped, so type 0 to turn a LoRA off. The sliders follow the chain as you connect, reorder, bypass or delete definitions, including through reroutes and subgraphs. Order does not change the result.

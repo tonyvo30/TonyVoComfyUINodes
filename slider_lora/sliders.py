@@ -14,12 +14,13 @@ class SliderDefinition:
     max_strength: float
     min_label: str = ""
     max_label: str = ""
+    display_name: str = ""
 
 
 def describe_slider(definition):
     min_end = f"{definition.min_label} {definition.min_strength:g}".strip()
     max_end = f"{definition.max_strength:g} {definition.max_label}".strip()
-    line = f"{definition.lora_name}: {definition.strength:g} ({min_end} .. {max_end})"
+    line = f"{definition.display_name or definition.lora_name}: {definition.strength:g} ({min_end} .. {max_end})"
     if not definition.min_strength <= definition.strength <= definition.max_strength:
         line += " outside range"
     return line

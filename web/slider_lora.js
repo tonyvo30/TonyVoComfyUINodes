@@ -67,10 +67,10 @@ function chainedDefinitions(applyNode) {
 
 function sliderRow(definition) {
     const loraName = String(findWidget(definition, "lora_name").value ?? "");
-    const hasCustomTitle = definition.title && definition.title !== definition.constructor.title;
+    const displayName = findWidget(definition, "display_name").value.trim();
     return {
         definitionId: definition.id,
-        title: hasCustomTitle ? definition.title : loraName.split(/[\\/]/).pop().replace(/\.[^.]+$/, ""),
+        title: displayName || loraName.split(/[\\/]/).pop().replace(/\.[^.]+$/, ""),
         minStrength: findWidget(definition, "min_strength").value,
         maxStrength: findWidget(definition, "max_strength").value,
         minLabel: findWidget(definition, "min_label").value,
