@@ -13,3 +13,6 @@ class TonyVoNodesExtension(ComfyExtension):
 
 async def comfy_entrypoint() -> TonyVoNodesExtension:
     return TonyVoNodesExtension()
+
+
+WEB_DIRECTORY = "./web"
