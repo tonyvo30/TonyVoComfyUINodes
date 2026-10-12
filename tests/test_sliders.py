@@ -11,16 +11,16 @@ from sliders import SliderDefinition, describe_slider  # noqa: E402
 
 class DescribeSliderTests(unittest.TestCase):
     def test_shows_strength_range_and_labels(self):
-        definition = SliderDefinition("4", "skin_detail.safetensors", -3.0, 2.5, "smooth", "detailed")
-        self.assertEqual(describe_slider(definition, 1.2), "skin_detail.safetensors: 1.2 (smooth -3 .. 2.5 detailed)")
+        definition = SliderDefinition("skin_detail.safetensors", 1.2, -3.0, 2.5, "smooth", "detailed")
+        self.assertEqual(describe_slider(definition), "skin_detail.safetensors: 1.2 (smooth -3 .. 2.5 detailed)")
 
     def test_omits_empty_labels(self):
-        definition = SliderDefinition("4", "age.safetensors", -2.0, 2.0)
-        self.assertEqual(describe_slider(definition, 0.0), "age.safetensors: 0 (-2 .. 2)")
+        definition = SliderDefinition("age.safetensors", 0.0, -2.0, 2.0)
+        self.assertEqual(describe_slider(definition), "age.safetensors: 0 (-2 .. 2)")
 
     def test_flags_strength_outside_range(self):
-        definition = SliderDefinition("4", "age.safetensors", -2.0, 2.0)
-        self.assertTrue(describe_slider(definition, 3.0).endswith(" outside range"))
+        definition = SliderDefinition("age.safetensors", 3.0, -2.0, 2.0)
+        self.assertTrue(describe_slider(definition).endswith(" outside range"))
 
 
 if __name__ == "__main__":

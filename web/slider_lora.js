@@ -4,80 +4,95 @@ import { api } from "../../scripts/api.js";
 const APPLY_NODE_CLASS = "TonyVoApplySliderLoras";
 const DEFINITION_NODE_CLASS = "TonyVoSliderLoraDefinition";
 const ROW_WIDGET_PREFIX = "slider_row_";
-const STRENGTHS_WIDGET_NAME = "slider_strengths";
 const MODE_MUTED = 2;
 const MODE_BYPASSED = 4;
 
-function widgetValue(node, widgetName) {
-    return node.widgets?.find((widget) => widget.name === widgetName)?.value;
+function findWidget(node, widgetName) {
+    return node.widgets?.find((widget) => widget.name === widgetName);
 }
 
-function sourceNode(node, inputName) {
-    let source = node.getInputNode(node.findInputSlot(inputName));
-    while (source?.type === "Reroute") {
-        source = source.getInputNode(0);
+function allGraphs() {
+    return [app.rootGraph, ...app.rootGraph.subgraphs.values()];
+}
+
+// The subgraph node a subgraph is used by, when it is used exactly once.
+function onlySubgraphNodeOf(subgraph) {
+    const subgraphNodes = allGraphs().flatMap((graph) => graph.nodes.filter((node) => node.subgraph === subgraph));
+    return subgraphNodes.length === 1 ? subgraphNodes[0] : null;
+}
+
+// Follows a link back to the node that produces its value, stepping through reroutes and into and out of subgraphs.
+// subgraphPath holds the subgraph nodes entered on the way, so the walk leaves each subgraph through the node it came in by.
+function linkSource(graph, linkId, subgraphPath) {
+    const link = linkId == null ? null : graph.getLink(linkId);
+    if (!link) {
+        return null;
     }
-    return source;
+    if (graph.inputNode && String(link.origin_id) === String(graph.inputNode.id)) {
+        const subgraphNode = subgraphPath.pop() ?? onlySubgraphNodeOf(graph);
+        return subgraphNode ? linkSource(subgraphNode.graph, subgraphNode.inputs[link.origin_slot].link, subgraphPath) : null;
+    }
+    const origin = graph.getNodeById(link.origin_id);
+    if (origin?.type === "Reroute") {
+        return linkSource(graph, origin.inputs[0].link, subgraphPath);
+    }
+    if (origin?.subgraph) {
+        if (origin.mode === MODE_MUTED || origin.mode === MODE_BYPASSED) {
+            return null;
+        }
+        subgraphPath.push(origin);
+        return linkSource(origin.subgraph, origin.subgraph.outputNode.slots[link.origin_slot].linkIds[0], subgraphPath);
+    }
+    return origin;
+}
+
+function sourceNode(node, inputName, subgraphPath) {
+    return linkSource(node.graph, node.inputs[node.findInputSlot(inputName)].link, subgraphPath);
 }
 
 // Walks up the chain from the Apply node, so definitions come out last first. A bypassed definition passes its
 // previous_sliders through, so it is skipped. A muted one is dropped from the prompt along with everything above it.
 function chainedDefinitions(applyNode) {
     const definitions = [];
-    let node = sourceNode(applyNode, "sliders");
+    const subgraphPath = [];
+    let node = sourceNode(applyNode, "sliders", subgraphPath);
     while (node?.comfyClass === DEFINITION_NODE_CLASS && node.mode !== MODE_MUTED) {
         if (node.mode !== MODE_BYPASSED) {
             definitions.push(node);
         }
-        node = sourceNode(node, "previous_sliders");
+        node = sourceNode(node, "previous_sliders", subgraphPath);
     }
     return definitions.reverse();
 }
 
 function sliderRow(definition) {
-    const loraName = String(widgetValue(definition, "lora_name") ?? "");
+    const loraName = String(findWidget(definition, "lora_name").value ?? "");
+    const hasCustomTitle = definition.title && definition.title !== definition.constructor.title;
     return {
         definitionId: definition.id,
-        loraTitle: loraName.split(/[\\/]/).pop().replace(/\.[^.]+$/, ""),
-        minStrength: widgetValue(definition, "min_strength"),
-        maxStrength: widgetValue(definition, "max_strength"),
-        minLabel: widgetValue(definition, "min_label"),
-        maxLabel: widgetValue(definition, "max_label"),
+        title: hasCustomTitle ? definition.title : loraName.split(/[\\/]/).pop().replace(/\.[^.]+$/, ""),
+        minStrength: findWidget(definition, "min_strength").value,
+        maxStrength: findWidget(definition, "max_strength").value,
+        minLabel: findWidget(definition, "min_label").value,
+        maxLabel: findWidget(definition, "max_label").value,
     };
 }
 
 function rowLabel(row) {
-    return `${row.loraTitle}  (${row.minLabel} ↔ ${row.maxLabel})`;
+    return `${row.title}  (${row.minLabel} ↔ ${row.maxLabel})`;
 }
 
-function strengthsWidget(applyNode) {
-    return applyNode.widgets.find((widget) => widget.name === STRENGTHS_WIDGET_NAME);
-}
-
-// Strengths are stored by definition node id, so they follow their definition when the chain is reordered.
-function readStrengths(applyNode) {
-    return JSON.parse(strengthsWidget(applyNode).value || "{}");
-}
-
-function writeStrengths(applyNode, strengthsByDefinitionId) {
-    strengthsWidget(applyNode).value = JSON.stringify(strengthsByDefinitionId);
-}
-
-// Drops strengths of deleted definitions. A definition that is only disconnected keeps its strength.
-function forgetDeletedDefinitions(applyNode) {
-    const strengthsByDefinitionId = readStrengths(applyNode);
-    const definitionIds = Object.keys(strengthsByDefinitionId);
-    const existingDefinitionIds = definitionIds.filter((definitionId) => applyNode.graph.getNodeById(definitionId));
-    if (existingDefinitionIds.length < definitionIds.length) {
-        writeStrengths(applyNode, Object.fromEntries(existingDefinitionIds.map((definitionId) => [definitionId, strengthsByDefinitionId[definitionId]])));
-    }
-}
-
+// Each row edits the hidden strength widget of its definition, so the strength travels with the definition
+// through reordering, copy and paste, and subgraphs.
 function refreshSliderRows(applyNode) {
-    forgetDeletedDefinitions(applyNode);
-    const rows = chainedDefinitions(applyNode).map(sliderRow);
+    const definitions = chainedDefinitions(applyNode);
+    const rows = definitions.map(sliderRow);
     const rowsSignature = JSON.stringify(rows);
     if (rowsSignature === applyNode.sliderRowsSignature) {
+        // Same rows, so only pick up strengths changed elsewhere, e.g. by undo. Rebuilding here would break a slider drag.
+        for (const definition of definitions) {
+            findWidget(applyNode, ROW_WIDGET_PREFIX + definition.id).value = findWidget(definition, "strength").value;
+        }
         return;
     }
     applyNode.sliderRowsSignature = rowsSignature;
@@ -87,15 +102,14 @@ function refreshSliderRows(applyNode) {
             applyNode.removeWidget(widget);
         }
     }
-    const strengthsByDefinitionId = readStrengths(applyNode);
-    for (const row of rows) {
+    for (const [rowIndex, row] of rows.entries()) {
+        const strengthWidget = findWidget(definitions[rowIndex], "strength");
         const setStrength = (strength) => {
-            const latestStrengths = readStrengths(applyNode);
-            latestStrengths[row.definitionId] = Math.round(strength * 100) / 100;
-            writeStrengths(applyNode, latestStrengths);
+            strengthWidget.value = Math.round(strength * 100) / 100;
+            definitions[rowIndex].setDirtyCanvas(true, false);
         };
-        const widget = applyNode.addWidget("slider", ROW_WIDGET_PREFIX + row.definitionId, strengthsByDefinitionId[row.definitionId] ?? 0,
-            setStrength, { min: row.minStrength, max: row.maxStrength, step: 0.01, precision: 2, serialize: false });
+        const widget = applyNode.addWidget("slider", ROW_WIDGET_PREFIX + row.definitionId, strengthWidget.value, setStrength,
+            { min: row.minStrength, max: row.maxStrength, step: 0.01, precision: 2, serialize: false });
         widget.label = rowLabel(row);
         widget.serialize = false;
     }
@@ -104,9 +118,14 @@ function refreshSliderRows(applyNode) {
 }
 
 function refreshAllSliderRows() {
-    for (const node of app.graph?.nodes ?? []) {
-        if (node.comfyClass === APPLY_NODE_CLASS) {
-            refreshSliderRows(node);
+    if (!app.rootGraph) {
+        return;
+    }
+    for (const graph of allGraphs()) {
+        for (const node of graph.nodes) {
+            if (node.comfyClass === APPLY_NODE_CLASS) {
+                refreshSliderRows(node);
+            }
         }
     }
 }
@@ -118,13 +137,11 @@ app.registerExtension({
         api.addEventListener("graphChanged", refreshAllSliderRows);
     },
     nodeCreated(node) {
-        if (node.comfyClass === APPLY_NODE_CLASS) {
-            strengthsWidget(node).hidden = true;
+        if (node.comfyClass === DEFINITION_NODE_CLASS) {
+            findWidget(node, "strength").hidden = true;
         }
     },
-    loadedGraphNode(node) {
-        if (node.comfyClass === APPLY_NODE_CLASS) {
-            refreshSliderRows(node);
-        }
+    afterConfigureGraph() {
+        refreshAllSliderRows();
     },
 });
