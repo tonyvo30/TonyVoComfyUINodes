@@ -181,7 +181,7 @@ The key covers the prompt, every widget (sampling settings and seed included), t
 To regenerate, delete the matching file. Each file also records what produced it under `generated_with`: the model nodes and their widgets, the sampling settings, and the size and hash of each image, video or audio input. Editing `generated_text` in the file changes what the node outputs.
 
 ## Apply LUT
-Color grades `image` with a 3D LUT. Load the LUT with **Load Image** and connect it to `lut`. It must be a strip of N tiles of N x N side by side, e.g. 1024x32 for a 32-step LUT: red runs across each tile, green down, blue from tile to tile. Colors between LUT steps are interpolated trilinearly.
+Color grades `image` with a 3D LUT. Load the LUT with **Load Image** and connect it to `lut`. It must be a strip of N tiles of N x N side by side, e.g. 1024x32 for a 32-step LUT: red runs across each tile, green down, blue from tile to tile. Colors between LUT steps are interpolated trilinearly. The lookup runs on the GPU with PyTorch, taking a few milliseconds for a 4MP image.
 
 `strength` blends from the original image (0) to the fully graded one (1). An alpha channel is passed through unchanged.
 
