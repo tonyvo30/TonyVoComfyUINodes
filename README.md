@@ -1,6 +1,6 @@
 # Tony Vo ComfyUI Nodes
 
-Keyword-triggered LoRA loading, slider LoRA controls, face coverage measurement and saved LLM text for ComfyUI. All nodes are in the `TonyVoNodes` category.
+Keyword-triggered LoRA loading, slider LoRA controls, face coverage measurement, LUT color grading and saved LLM text for ComfyUI. All nodes are in the `TonyVoNodes` category.
 
 | Node | Purpose |
 | --- | --- |
@@ -12,6 +12,7 @@ Keyword-triggered LoRA loading, slider LoRA controls, face coverage measurement 
 | [Slider LoRA Definition](#slider-lora-definition) | Describes a slider LoRA: its usable strength range and what each end does. |
 | [Apply Slider LoRAs](#apply-slider-loras) | Shows a slider for each chained definition and applies the LoRAs to the model. |
 | [Face Coverage](#face-coverage) | Outputs the percent of an image covered by detected faces. |
+| [Apply LUT](#apply-lut) | Color grades an image with a 3D LUT strip image, blended by strength. |
 | [Generate Text (Saved)](#generate-text-saved) | Generate Text that saves its output to disk and reuses it after a restart. |
 
 ## Installation
@@ -178,6 +179,11 @@ Same inputs and outputs as the core **Generate Text** node, but each result is s
 The key covers the prompt, every widget (sampling settings and seed included), the nodes and widgets behind each linked input, such as the CLIP loader and its model file name, and the pixels of the image, video and audio. Changing any of them generates and saves a new result. A seed set to randomize generates every run. Replacing a model file under the same name does not change the key.
 
 To regenerate, delete the matching file. Each file also records what produced it under `generated_with`: the model nodes and their widgets, the sampling settings, and the size and hash of each image, video or audio input. Editing `generated_text` in the file changes what the node outputs.
+
+## Apply LUT
+Color grades `image` with a 3D LUT. Load the LUT with **Load Image** and connect it to `lut`. It must be a strip of N tiles of N x N side by side, e.g. 1024x32 for a 32-step LUT: red runs across each tile, green down, blue from tile to tile. Colors between LUT steps are interpolated trilinearly.
+
+`strength` blends from the original image (0) to the fully graded one (1). An alpha channel is passed through unchanged.
 
 ## Tests
 From the repo root:
