@@ -1,3 +1,4 @@
+import comfy.model_management
 import torch
 import torch.nn.functional as F
 from comfy_api.latest import io
@@ -42,6 +43,7 @@ class ApplyLutNode(io.ComfyNode):
 
     @classmethod
     def execute(cls, image, lut, strength) -> io.NodeOutput:
+        image = image.to(comfy.model_management.get_torch_device())
         lut_volume = lut_strip_to_volume(lut.to(image))
         graded = torch.lerp(image[..., :3], apply_lut(image, lut_volume), strength)
-        return io.NodeOutput(torch.cat((graded, image[..., 3:]), dim=-1))
+        return io.NodeOutput(torch.cat((graded, image[..., 3:]), dim=-1).to(comfy.model_management.intermediate_device()))
