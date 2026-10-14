@@ -1,6 +1,6 @@
 # Tony Vo ComfyUI Nodes
 
-Keyword-triggered LoRA loading, slider LoRA controls and face coverage measurement for ComfyUI. All nodes are in the `TonyVoNodes` category.
+Keyword-triggered LoRA loading, slider LoRA controls, face coverage measurement and saved LLM text for ComfyUI. All nodes are in the `TonyVoNodes` category.
 
 | Node | Purpose |
 | --- | --- |
@@ -12,6 +12,7 @@ Keyword-triggered LoRA loading, slider LoRA controls and face coverage measureme
 | [Slider LoRA Definition](#slider-lora-definition) | Describes a slider LoRA: its usable strength range and what each end does. |
 | [Apply Slider LoRAs](#apply-slider-loras) | Shows a slider for each chained definition and applies the LoRAs to the model. |
 | [Face Coverage](#face-coverage) | Outputs the percent of an image covered by detected faces. |
+| [Generate Text (Saved)](#generate-text-saved) | Generate Text that saves its output to disk and reuses it after a restart. |
 
 ## Installation
 
@@ -170,6 +171,13 @@ Detects faces with OpenCV YuNet and outputs `percent`, the share of the image co
 Place a YuNet model, e.g. `face_detection_yunet_2023mar.onnx` or `face_detection_yunet_2026may.onnx` from [opencv_zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet), in `models/yunet`. Only `.onnx` files are listed. `score_threshold` is the minimum detection confidence; lower finds more faces but more false ones.
 
 Images are measured on a copy downscaled to 640 px on the long side, since YuNet misses large close-up faces at full resolution. An alpha channel is ignored.
+
+## Generate Text (Saved)
+Same inputs and outputs as the core **Generate Text** node, but each result is saved to `user/text_generate_cache/<key>.json` and reused on later runs, including after ComfyUI restarts. When a saved result exists the text encoder is not loaded at all. Useful for text that rarely changes, such as a lighting description of a fixed reference image.
+
+The key covers the prompt, every widget (sampling settings and seed included), the nodes and widgets behind each linked input, such as the CLIP loader and its model file name, and the pixels of the image, video and audio. Changing any of them generates and saves a new result. A seed set to randomize generates every run. Replacing a model file under the same name does not change the key.
+
+To regenerate, delete the matching file. Each file also records what produced it under `generated_with`: the model nodes and their widgets, the sampling settings, and the size and hash of each image, video or audio input. Editing `generated_text` in the file changes what the node outputs.
 
 ## Tests
 From the repo root:
