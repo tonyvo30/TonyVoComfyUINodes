@@ -203,3 +203,6 @@ From the repo root:
 ```
 python -m unittest discover tests
 ```
+
+## License
+[MIT](LICENSE). [`character_lora/`](character_lora/LICENSE) is also MIT, with copyright held by capitan01R for the original node and Tony Vo for the changes to it.
