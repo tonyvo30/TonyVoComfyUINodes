@@ -8,8 +8,8 @@ import folder_paths
 from comfy_api.latest import io
 
 from .matching import (ALL_LORAS_FOLDER, CHARACTER_AUTO, CHARACTER_FULL_LORA, CHARACTER_IMAGE_ONLY, NO_CHARACTER, NO_LORA, RANDOM_LORA,
-                       RANDOM_LORA_ONE_SUBFOLDER_FIRST, KeywordCharacter, KeywordLoraRule, describe_keyword_match, evaluate_keyword_loras,
-                       list_lora_folders, lora_names_under_folder, pick_lora, strip_inline_lora_tags)
+                       RANDOM_LORA_ONE_SUBFOLDER_FIRST, KeywordCharacter, KeywordLoraRule, evaluate_keyword_loras,
+                       list_lora_folders, lora_names_under_folder, pick_lora)
 
 KeywordLoraRules = io.Custom("TONYVO_KEYWORD_LORA_RULES")
 KeywordCharacters = io.Custom("TONYVO_KEYWORD_CHARACTERS")
@@ -183,37 +183,6 @@ class ApplyKeywordLorasNode(io.ComfyNode):
                              character.lora_name if character else "", character.strength if character_loader_enabled else 0.0,
                              character_loader_enabled,
                              result.added_positive, result.added_negative, result.trigger)
-
-
-class KeywordMatchNode(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return io.Schema(
-            node_id="TonyVoKeywordMatch",
-            display_name="Keyword Match",
-            category=CATEGORY,
-            description="Outputs true when the keywords are found in the text. Connect it to another node's enabled "
-                        "input, e.g. Krea2T Character LoRA, to switch that node on by keyword.",
-            inputs=[
-                io.String.Input("text", force_input=True,
-                                tooltip="Text to search, usually the positive output of Apply Keyword LoRAs so words added by rules count."),
-                io.String.Input("match_any", multiline=True,
-                                tooltip="Comma separated. Matches when any of these appear in the text."),
-                io.String.Input("require_all", multiline=True,
-                                tooltip="Comma separated. Every one of these must also appear."),
-                io.String.Input("exclude", multiline=True,
-                                tooltip="Comma separated. No match if any of these appear."),
-            ],
-            outputs=[
-                io.Boolean.Output(display_name="matched"),
-                io.String.Output(display_name="reason"),
-            ],
-        )
-
-    @classmethod
-    def execute(cls, text, match_any, require_all, exclude) -> io.NodeOutput:
-        matched, reason = describe_keyword_match(strip_inline_lora_tags(text), match_any, require_all, exclude)
-        return io.NodeOutput(matched, reason)
 
 
 class LoraPickerNode(io.ComfyNode):

@@ -7,7 +7,6 @@ Keyword-triggered LoRA loading, slider LoRA controls, face coverage measurement,
 | [Keyword LoRA Rule](#keyword-lora-rule) | Applies a LoRA only when its keywords appear in the prompt. |
 | [Keyword Character](#keyword-character) | Selects one character LoRA per prompt by keyword, applied image-only or as a full LoRA. |
 | [Apply Keyword LoRAs](#apply-keyword-loras) | Evaluates rules, characters and inline `<lora:...>` tags, and patches the model. |
-| [Keyword Match](#keyword-match) | Outputs true when keywords are found, to switch other nodes on. |
 | [LoRA Picker](#lora-picker) | Picks a specific or random LoRA from one folder of the loras folder. |
 | [Slider LoRA Definition](#slider-lora-definition) | Describes a slider LoRA: its usable strength range and what each end does. |
 | [Apply Slider LoRAs](#apply-slider-loras) | Shows a slider for each chained definition and applies the LoRAs to the model. |
@@ -121,9 +120,6 @@ Krea2 model → Apply Keyword LoRAs → other LoRA loaders → Krea2T Character 
 ```
 
 The character's trigger words are already in the `positive` output, so nothing else is needed to prompt the character. One wiring covers both modes: an `image only` character is loaded by the Krea2T node, and a `full LoRA` character is loaded by Apply Keyword LoRAs while the Krea2T node is bypassed. A rule or inline tag for the selected character's LoRA follows the character's `apply_as` instead of loading it again.
-
-### Keyword Match
-Outputs `matched` (true/false) and a `reason` using the same `match_any` / `require_all` / `exclude` logic as the rules. Connect `matched` to another node's `enabled` input to switch it on by keyword. Feed `text` from the `positive` output of Apply Keyword LoRAs so words added by rules count. Inline `<lora:...>` tags in the text are ignored. For character LoRAs, use Keyword Character instead: Apply Keyword LoRAs passes the selected character to the character loader directly.
 
 ### LoRA Picker
 Picks a LoRA from one folder of the loras folder. Choose a `folder`, e.g. `characters`, and the `lora` list shows only the LoRAs in it and its subfolders, relative to that folder. `(all)` lists every LoRA. Besides a specific LoRA, `lora` can be:
