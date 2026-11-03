@@ -117,7 +117,7 @@ Each LoRA is applied at most once; the first inline tag or rule that applies it 
 The LoRA files used by the last run stay in memory, so re-running with a different prompt does not reread them from disk. A file is reloaded when it changes on disk.
 
 ### Krea2 Character LoRA (Image Only)
-Applies a Krea2 character LoRA or LoKr to image tokens, including reference-image tokens, and not to text tokens. A character LoRA loaded the normal way also changes the prompt's internal representation, which can make requested details less reliable or change how other LoRAs behave. Text and image still interact through the model's normal attention, so this reduces that interference rather than removing it. Under Krea2 Edit with NAG, only the target image's tokens are updated. Requires a native Krea2 model.
+Applies a Krea2 character LoRA or LoKr to image tokens, including reference-image tokens, and not to text tokens. A character LoRA loaded the normal way also changes the prompt's internal representation, which can make requested details less reliable or change how other LoRAs behave. Text and image still interact through the model's normal attention, so this reduces that interference rather than removing it. Under Krea2 Edit with NAG, only the target image's tokens are updated. Requires a native Krea2 model. When `lora_name` is linked, a file replaced under the same name is only picked up after a restart or a change to the node's inputs.
 
 | Input/output | Meaning |
 | --- | --- |

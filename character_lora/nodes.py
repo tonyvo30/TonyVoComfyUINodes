@@ -1,7 +1,8 @@
 # Mirrored from the "Krea2T Character LoRA — Image Only" node of ComfyUI-Krea2T-Enhancer by capitan01R, MIT licensed
 # (see LICENSE in this folder). The original repository and registry listing were removed and our fork of it is private,
 # so without this copy the image only path of Apply Keyword LoRAs would depend on a node nobody else can install.
-# Changes from the original: Krea2 NAG support, and a V3 node with its own node id and scope, so both packs can be installed together.
+# Changes from the original: Krea2 NAG support, a fingerprint that handles linked inputs, and a V3 node with its own node id
+# and scope, so both packs can be installed together.
 import json
 from pathlib import Path
 import uuid
@@ -115,7 +116,8 @@ class Krea2CharacterLoraImageOnlyNode(io.ComfyNode):
 
     @classmethod
     def fingerprint_inputs(cls, model, lora_name, strength_model, enabled=True):
-        if not enabled or strength_model == 0:
+        # Linked inputs are None here, so a linked lora_name can't be checked and a linked enabled may still be on.
+        if enabled is False or strength_model == 0 or lora_name is None:
             return "bypassed"
         path = folder_paths.get_full_path_or_raise("loras", lora_name)
         stat = Path(path).stat()
