@@ -181,6 +181,9 @@ Color grades `image` with a 3D LUT. Load the LUT with **Load Image** and connect
 
 `strength` blends from the original image (0) to the fully graded one (1). An alpha channel is passed through unchanged.
 
+## Restart ComfyUI
+Adds a **Restart ComfyUI** button to the top bar and a command of the same name to the command palette. It asks for confirmation, since queued and running jobs are lost, then restarts through ComfyUI Manager, so ComfyUI must be started with `--enable-manager`. The tab reconnects by itself; reload it to pick up frontend changes.
+
 ## Tests
 From the repo root:
 
