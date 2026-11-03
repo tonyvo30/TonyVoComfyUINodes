@@ -5,7 +5,7 @@ import folder_paths
 from comfy_api.latest import io
 from comfy_extras.nodes_textgen import TextGenerate
 
-from .cache_key import MEDIA_INPUTS, describe_media, describe_upstream, text_generate_cache_key
+from .cache_key import MEDIA_INPUTS, TEXT_INPUTS, describe_media, describe_upstream, text_generate_cache_key
 
 CATEGORY = "TonyVoNodes"
 
@@ -28,8 +28,8 @@ class SavedTextGenerateNode(TextGenerate):
 
     @classmethod
     def saved_output_path(cls, inputs):
-        media = {name: inputs[name] for name in MEDIA_INPUTS if inputs.get(name) is not None}
-        cache_key = text_generate_cache_key(cls.hidden.prompt, cls.hidden.unique_id, media)
+        resolved_inputs = {name: inputs[name] for name in (*TEXT_INPUTS, *MEDIA_INPUTS) if inputs.get(name) is not None}
+        cache_key = text_generate_cache_key(cls.hidden.prompt, cls.hidden.unique_id, resolved_inputs)
         return os.path.join(folder_paths.get_user_directory(), "text_generate_cache", cache_key + ".json")
 
     @classmethod
@@ -51,7 +51,10 @@ class SavedTextGenerateNode(TextGenerate):
             "media": {name: describe_media(kwargs[name]) for name in MEDIA_INPUTS if kwargs.get(name) is not None},
         }
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as file:
+        # A partly written file would be taken for a saved result on every later run.
+        temporary_path = path + ".tmp"
+        with open(temporary_path, "w", encoding="utf-8") as file:
             json.dump({"prompt": kwargs["prompt"], "generated_text": out.args[0], "thinking": out.args[1], "generated_with": generated_with},
                       file, indent=2, ensure_ascii=False)
+        os.replace(temporary_path, path)
         return out

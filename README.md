@@ -185,7 +185,7 @@ Images are measured on a copy downscaled to 640 px on the long side, since YuNet
 ## Generate Text (Saved)
 Same inputs and outputs as the core **Generate Text** node, but each result is saved to `user/text_generate_cache/<key>.json` and reused on later runs, including after ComfyUI restarts. When a saved result exists the text encoder is not loaded at all. Useful for text that rarely changes, such as a lighting description of a fixed reference image.
 
-The key covers the prompt, every widget (sampling settings and seed included), the nodes and widgets behind each linked input, such as the CLIP loader and its model file name, and the pixels of the image, video and audio. Changing any of them generates and saves a new result. A seed set to randomize generates every run. Replacing a model file under the same name does not change the key.
+The key covers the text of the prompt and system prompt, every widget (sampling settings and seed included), the nodes and widgets behind each other linked input, such as the CLIP loader and its model file name, and the pixels of the image, video and audio. Changing any of them generates and saves a new result. A seed set to randomize generates every run. Replacing a model file under the same name does not change the key.
 
 To regenerate, delete the matching file. Each file also records what produced it under `generated_with`: the model nodes and their widgets, the sampling settings, and the size and hash of each image, video or audio input. Editing `generated_text` in the file changes what the node outputs.
 

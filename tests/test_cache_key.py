@@ -48,6 +48,19 @@ class TextGenerateCacheKeyTests(unittest.TestCase):
         key = text_generate_cache_key(prompt, "3", {"image": self.image, "audio": {"waveform": waveform, "sample_rate": 44100}})
         self.assertNotEqual(text_generate_cache_key(prompt, "3", {"image": self.image, "audio": {"waveform": waveform, "sample_rate": 48000}}), key)
 
+    def test_prompt_widget_passed_as_resolved_text_keeps_the_key(self):
+        key = text_generate_cache_key(lighting_prompt(), "3", {"image": self.image, "prompt": "Describe the lighting."})
+        self.assertEqual(key, self.key)
+
+    def test_linked_prompt_is_hashed_by_its_text(self):
+        prompt = lighting_prompt()
+        prompt["4"] = {"class_type": "ReadTextFile", "inputs": {"path": "notes.txt", "seed": 1}}
+        prompt["3"]["inputs"]["prompt"] = ["4", 0]
+        key = text_generate_cache_key(prompt, "3", {"image": self.image, "prompt": "first"})
+        self.assertNotEqual(text_generate_cache_key(prompt, "3", {"image": self.image, "prompt": "second"}), key)
+        prompt["4"]["inputs"]["seed"] = 2
+        self.assertEqual(text_generate_cache_key(prompt, "3", {"image": self.image, "prompt": "first"}), key)
+
 
 
 class DescribeUpstreamTests(unittest.TestCase):

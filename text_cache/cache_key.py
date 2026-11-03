@@ -2,6 +2,7 @@ import hashlib
 import json
 
 MEDIA_INPUTS = ("image", "video", "audio")
+TEXT_INPUTS = ("prompt", "system_prompt")
 
 
 def is_link(value):
@@ -45,15 +46,16 @@ def describe_media(value):
     return f"{'x'.join(map(str, shape))}, sha256 {digest}"
 
 
-def text_generate_cache_key(prompt, node_id, media):
-    """Hashes a node's widget values, the subgraphs behind its linked inputs, and the pixels or samples of its media.
+def text_generate_cache_key(prompt, node_id, resolved_inputs):
+    """Hashes a node's widget values, the text and media in resolved_inputs, and the subgraphs behind its other linked inputs.
 
-    Media is hashed by content because a loader's widgets (a filename) don't change when the file does.
+    Text and media are hashed by content because the widgets producing them (a filename) don't change when the content does.
     """
     inputs = {}
     for name, value in prompt[node_id]["inputs"].items():
-        if name in media:
-            inputs[name] = media_fingerprint(media[name])
+        if name in resolved_inputs:
+            resolved_value = resolved_inputs[name]
+            inputs[name] = resolved_value if isinstance(resolved_value, str) else media_fingerprint(resolved_value)
         elif is_link(value):
             inputs[name] = upstream_signature(prompt, *value)
         else:
