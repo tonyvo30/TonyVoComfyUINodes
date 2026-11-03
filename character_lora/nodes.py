@@ -1,7 +1,7 @@
 # Mirrored from the "Krea2T Character LoRA — Image Only" node of ComfyUI-Krea2T-Enhancer by capitan01R, MIT licensed
 # (see LICENSE in this folder). The original repository and registry listing were removed and our fork of it is private,
 # so without this copy the image only path of Apply Keyword LoRAs would depend on a node nobody else can install.
-# Changes from the original: a V3 node with its own node id and scope, so both packs can be installed together.
+# Changes from the original: Krea2 NAG support, and a V3 node with its own node id and scope, so both packs can be installed together.
 import json
 from pathlib import Path
 import uuid

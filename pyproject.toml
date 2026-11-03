@@ -1,7 +1,7 @@
 [project]
 name = "tonyvo-comfyui-nodes"
-description = "Apply LoRAs only when their keywords appear in the prompt."
-version = "2.0.0"
+description = "Keyword-triggered LoRAs, image-only Krea2 character LoRAs, slider LoRAs, face coverage, LUT color grading and saved LLM text."
+version = "3.0.0"
 license = {file = "LICENSE"}
 dependencies = ["opencv-python-headless"]
 

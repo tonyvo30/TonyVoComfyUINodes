@@ -199,7 +199,7 @@ def pick_lora(available_lora_names, folder, lora_choice, random_generator):
     lora_names_by_relative_path = lora_names_under_folder(available_lora_names, folder)
     if lora_choice == RANDOM_LORA:
         candidate_paths = sorted(lora_names_by_relative_path)
-    elif lora_choice == RANDOM_LORA_ONE_SUBFOLDER_FIRST:
+    else:
         paths_by_subfolder = {}
         for relative_path in sorted(lora_names_by_relative_path):
             paths_by_subfolder.setdefault(relative_path.split("/", 1)[0] if "/" in relative_path else "", []).append(relative_path)

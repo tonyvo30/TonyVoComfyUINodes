@@ -33,15 +33,9 @@ async function restartComfyUI() {
         showToast("error", "ComfyUI is not reachable, so it cannot be restarted from here.");
         return;
     }
-    let response;
-    try {
-        response = await api.fetchApi(MANAGER_REBOOT_ROUTE, { method: "POST", headers: { "Content-Type": "application/json" } });
-    } catch {
-        // The route replaces the server process without answering, so a dropped connection is the normal result.
-        showToast("info", RESTARTING_MESSAGE);
-        return;
-    }
-    if (response.ok) {
+    // The route replaces the server process without answering, so a dropped connection is the normal result.
+    const response = await api.fetchApi(MANAGER_REBOOT_ROUTE, { method: "POST", headers: { "Content-Type": "application/json" } }).catch(() => null);
+    if (!response || response.ok) {
         showToast("info", RESTARTING_MESSAGE);
     } else {
         showToast("error", describeRejectedRestart(response.status));
@@ -49,7 +43,7 @@ async function restartComfyUI() {
 }
 
 app.registerExtension({
-    name: "TonyVo.RestartComfyUI",
+    name: RESTART_COMMAND_ID,
     commands: [{ id: RESTART_COMMAND_ID, icon: RESTART_ICON, label: RESTART_LABEL, function: restartComfyUI }],
     actionBarButtons: [{ icon: RESTART_ICON, label: RESTART_LABEL, tooltip: RESTART_LABEL, onClick: restartComfyUI }],
 });

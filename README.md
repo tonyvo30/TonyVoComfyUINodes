@@ -24,7 +24,13 @@ git clone https://github.com/tonyvo30/TonyVoComfyUINodes
 pip install -r TonyVoComfyUINodes/requirements.txt
 ```
 
-The only dependency is `opencv-python-headless`, used by Face Coverage. It is imported when the pack loads, so without it none of the nodes appear.
+The only dependency is `opencv-python-headless`, used by Face Coverage. It is imported when the pack loads, so without it none of the nodes appear. The same goes for ComfyUI itself: the pack needs a version with native Krea2 support and the Generate Text node.
+
+### Upgrading to 3.0
+
+- **Keyword Match** has been removed, and workflows that use it show it as a missing node. To switch a character loader on, use `character_enabled` on Apply Keyword LoRAs. There is no replacement for switching other nodes on by keyword.
+- **LoRA Picker** now has plain `folder` and `lora` dropdowns. A specific LoRA saved by an older version may need selecting again.
+- **Slider LoRA Definition** no longer uses the node's title as the slider name. Set `display_name` instead.
 
 ### Upgrading from Add Lora with String
 
@@ -111,7 +117,7 @@ Each LoRA is applied at most once; the first inline tag or rule that applies it 
 The LoRA files used by the last run stay in memory, so re-running with a different prompt does not reread them from disk. A file is reloaded when it changes on disk.
 
 ### Krea2 Character LoRA (Image Only)
-Applies a Krea2 character LoRA or LoKr to image tokens, including reference-image tokens, and not to text tokens. A character LoRA loaded the normal way also changes the prompt's internal representation, which can make requested details less reliable or change how other LoRAs behave. Text and image still interact through the model's normal attention, so this reduces that interference rather than removing it. Requires a native Krea2 model.
+Applies a Krea2 character LoRA or LoKr to image tokens, including reference-image tokens, and not to text tokens. A character LoRA loaded the normal way also changes the prompt's internal representation, which can make requested details less reliable or change how other LoRAs behave. Text and image still interact through the model's normal attention, so this reduces that interference rather than removing it. Under Krea2 Edit with NAG, only the target image's tokens are updated. Requires a native Krea2 model.
 
 | Input/output | Meaning |
 | --- | --- |
