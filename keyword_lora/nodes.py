@@ -8,8 +8,7 @@ import folder_paths
 from comfy_api.latest import io
 
 from .matching import (ALL_LORAS_FOLDER, CHARACTER_AUTO, CHARACTER_FULL_LORA, CHARACTER_IMAGE_ONLY, NO_CHARACTER, NO_LORA, RANDOM_LORA,
-                       RANDOM_LORA_ONE_SUBFOLDER_FIRST, KeywordCharacter, KeywordLoraRule, evaluate_keyword_loras,
-                       list_lora_folders, lora_names_under_folder, pick_lora)
+                       RANDOM_LORA_ONE_SUBFOLDER_FIRST, KeywordCharacter, KeywordLoraRule, evaluate_keyword_loras, list_lora_folders, pick_lora)
 
 KeywordLoraRules = io.Custom("TONYVO_KEYWORD_LORA_RULES")
 KeywordCharacters = io.Custom("TONYVO_KEYWORD_CHARACTERS")
@@ -193,20 +192,17 @@ class LoraPickerNode(io.ComfyNode):
             node_id="TonyVoLoraPicker",
             display_name="LoRA Picker",
             category=CATEGORY,
-            description="Picks a LoRA from a folder of the loras folder, either a specific one or at random. Connect it to "
+            description="Picks a LoRA, either a specific one or at random from a folder of the loras folder. Connect it to "
                         "character_override on Apply Keyword LoRAs to choose the character.",
             inputs=[
-                io.DynamicCombo.Input("folder", options=[
-                    io.DynamicCombo.Option(folder, [
-                        io.Combo.Input("lora", options=[RANDOM_LORA, RANDOM_LORA_ONE_SUBFOLDER_FIRST, NO_CHARACTER]
-                                       + sorted(lora_names_under_folder(lora_names, folder)),
-                                       tooltip="A LoRA in this folder or its subfolders. random gives every LoRA an equal chance. "
-                                               "random, one subfolder first picks one subfolder with equal chance, then a LoRA inside it, "
-                                               "so a subfolder with many LoRAs is not favored. LoRAs directly inside the folder count "
-                                               "as one more subfolder. none outputs none, which turns off "
-                                               "characters on Apply Keyword LoRAs."),
-                    ]) for folder in [ALL_LORAS_FOLDER] + list_lora_folders(lora_names)
-                ], tooltip="Folder inside the loras folder. Only its LoRAs are listed. (all) lists every LoRA."),
+                io.Combo.Input("folder", options=[ALL_LORAS_FOLDER] + list_lora_folders(lora_names),
+                               tooltip="Folder inside the loras folder that random picks from. (all) covers every LoRA. "
+                                       "Ignored when lora is a specific LoRA."),
+                io.Combo.Input("lora", options=[RANDOM_LORA, RANDOM_LORA_ONE_SUBFOLDER_FIRST, NO_CHARACTER] + lora_names,
+                               tooltip="random gives every LoRA in the folder an equal chance. random, one subfolder first picks one "
+                                       "subfolder with equal chance, then a LoRA inside it, so a subfolder with many LoRAs is not favored. "
+                                       "LoRAs directly inside the folder count as one more subfolder. none outputs none, which turns off "
+                                       "characters on Apply Keyword LoRAs. A specific LoRA is output as is."),
                 io.Int.Input("seed", default=0, min=0, max=0xffffffffffffffff, control_after_generate=True,
                              tooltip="Only used when lora is random."),
             ],
@@ -214,5 +210,5 @@ class LoraPickerNode(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, folder, seed) -> io.NodeOutput:
-        return io.NodeOutput(pick_lora(folder_paths.get_filename_list("loras"), folder["folder"], folder["lora"], random.Random(seed)))
+    def execute(cls, folder, lora, seed) -> io.NodeOutput:
+        return io.NodeOutput(pick_lora(folder_paths.get_filename_list("loras"), folder, lora, random.Random(seed)))

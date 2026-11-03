@@ -186,12 +186,16 @@ def lora_names_under_folder(available_lora_names, folder):
 
 
 def pick_lora(available_lora_names, folder, lora_choice, random_generator):
-    """Resolve a LoRA Picker choice: a path relative to the folder, RANDOM_LORA for any LoRA under it, or
+    """Resolve a LoRA Picker choice: a LoRA name, which ignores the folder, RANDOM_LORA for any LoRA under the folder, or
     RANDOM_LORA_ONE_SUBFOLDER_FIRST to pick a first level subfolder with equal chance and then a LoRA inside it.
     LoRAs directly inside the folder count as one more subfolder. NO_CHARACTER is passed through, so the pick
     can turn off characters on Apply Keyword LoRAs. Raises LookupError when nothing can be picked."""
     if lora_choice == NO_CHARACTER:
         return NO_CHARACTER
+    if lora_choice not in (RANDOM_LORA, RANDOM_LORA_ONE_SUBFOLDER_FIRST):
+        if lora_choice not in available_lora_names:
+            raise LookupError(f'LoRA "{lora_choice}" not found')
+        return lora_choice
     lora_names_by_relative_path = lora_names_under_folder(available_lora_names, folder)
     if lora_choice == RANDOM_LORA:
         candidate_paths = sorted(lora_names_by_relative_path)
@@ -200,10 +204,6 @@ def pick_lora(available_lora_names, folder, lora_choice, random_generator):
         for relative_path in sorted(lora_names_by_relative_path):
             paths_by_subfolder.setdefault(relative_path.split("/", 1)[0] if "/" in relative_path else "", []).append(relative_path)
         candidate_paths = paths_by_subfolder[random_generator.choice(sorted(paths_by_subfolder))] if paths_by_subfolder else []
-    elif lora_choice in lora_names_by_relative_path:
-        return lora_names_by_relative_path[lora_choice]
-    else:
-        raise LookupError(f'LoRA "{lora_choice}" not found in "{folder}"')
     if not candidate_paths:
         raise LookupError(f'No LoRAs found in "{folder}"')
     return lora_names_by_relative_path[random_generator.choice(candidate_paths)]

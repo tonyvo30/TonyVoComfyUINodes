@@ -351,9 +351,9 @@ class PickLoraTests(unittest.TestCase):
     LORA_NAMES = ["characters\\jane\\v1.safetensors", "characters/jane/v2.safetensors", "characters/jane/v3.safetensors",
                   "characters/mia/v1.safetensors", "characters/solo.safetensors"]
 
-    def test_specific_choice_returns_the_original_lora_name(self):
+    def test_specific_choice_returns_the_lora_and_ignores_the_folder(self):
         random_generator = FirstChoiceRandom()
-        self.assertEqual(pick_lora(self.LORA_NAMES, "characters", "jane/v1.safetensors", random_generator),
+        self.assertEqual(pick_lora(self.LORA_NAMES, "styles", "characters\\jane\\v1.safetensors", random_generator),
                          "characters\\jane\\v1.safetensors")
         self.assertEqual(random_generator.offered_choices, [])
 
