@@ -204,7 +204,7 @@ class LoraPickerNode(io.ComfyNode):
                                        "LoRAs directly inside the folder count as one more subfolder. none outputs none, which turns off "
                                        "characters on Apply Keyword LoRAs. A specific LoRA is output as is."),
                 io.Int.Input("seed", default=0, min=0, max=0xffffffffffffffff, control_after_generate=True,
-                             tooltip="Only used when lora is random."),
+                             tooltip="Only used when lora is random. Otherwise set it to fixed, since a changing seed reruns the nodes after this one."),
             ],
             outputs=[io.AnyType.Output(display_name="lora_name")],
         )
