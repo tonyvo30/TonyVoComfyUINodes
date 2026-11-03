@@ -1,12 +1,13 @@
 # Tony Vo ComfyUI Nodes
 
-Keyword-triggered LoRA loading, slider LoRA controls, face coverage measurement, LUT color grading and saved LLM text for ComfyUI. All nodes are in the `TonyVoNodes` category.
+Keyword-triggered LoRA loading, image-only character LoRAs for Krea2, slider LoRA controls, face coverage measurement, LUT color grading and saved LLM text for ComfyUI. All nodes are in the `TonyVoNodes` category.
 
 | Node | Purpose |
 | --- | --- |
 | [Keyword LoRA Rule](#keyword-lora-rule) | Applies a LoRA only when its keywords appear in the prompt. |
 | [Keyword Character](#keyword-character) | Selects one character LoRA per prompt by keyword, applied image-only or as a full LoRA. |
 | [Apply Keyword LoRAs](#apply-keyword-loras) | Evaluates rules, characters and inline `<lora:...>` tags, and patches the model. |
+| [Krea2 Character LoRA (Image Only)](#krea2-character-lora-image-only) | Applies a Krea2 character LoRA to image tokens only. |
 | [LoRA Picker](#lora-picker) | Picks a specific LoRA, or a random one from a folder of the loras folder. |
 | [Slider LoRA Definition](#slider-lora-definition) | Describes a slider LoRA: its usable strength range and what each end does. |
 | [Apply Slider LoRAs](#apply-slider-loras) | Shows a slider for each chained definition and applies the LoRAs to the model. |
@@ -63,7 +64,7 @@ Rules are evaluated in chain order and each rule sees the words added by the rul
 ### Keyword Character
 Defines a character selected by keywords, with the same `match_any` / `require_all` / `exclude` logic as the rules. Only one character is selected per prompt: the first in the chain that matches. When selected, its words are appended to the prompts and its LoRA is applied according to `apply_as`:
 
-- `image only`: the LoRA and strength are passed out of **Apply Keyword LoRAs** for a dedicated character loader, e.g. [Krea2T Character LoRA — Image Only](https://github.com/capitan01R/ComfyUI-Krea2T-Enhancer#character-lora--image-only), which applies the character LoRA to image tokens only.
+- `image only`: the LoRA and strength are passed out of **Apply Keyword LoRAs** for a dedicated character loader, e.g. [Krea2 Character LoRA (Image Only)](#krea2-character-lora-image-only), which applies the character LoRA to image tokens only.
 - `full LoRA`: Apply Keyword LoRAs loads the LoRA like a normal LoRA, at `strength` for both model and CLIP.
 
 Either way, a rule or inline tag for the selected character's LoRA does not apply it a second time.
@@ -109,17 +110,29 @@ Each LoRA is applied at most once; the first inline tag or rule that applies it 
 
 The LoRA files used by the last run stay in memory, so re-running with a different prompt does not reread them from disk. A file is reloaded when it changes on disk.
 
-### Character LoRAs with Krea2T
-Wire the three character outputs of Apply Keyword LoRAs into [Krea2T Character LoRA — Image Only](https://github.com/capitan01R/ComfyUI-Krea2T-Enhancer#character-lora--image-only):
+### Krea2 Character LoRA (Image Only)
+Applies a Krea2 character LoRA or LoKr to image tokens, including reference-image tokens, and not to text tokens. A character LoRA loaded the normal way also changes the prompt's internal representation, which can make requested details less reliable or change how other LoRAs behave. Text and image still interact through the model's normal attention, so this reduces that interference rather than removing it. Requires a native Krea2 model.
+
+| Input/output | Meaning |
+| --- | --- |
+| `model` | Krea2 model. Connect Krea2 NAG after the last Krea2 Character LoRA (Image Only). |
+| `lora_name` | Character LoRA or LoKr. Weights outside Krea2's shared DiT blocks are skipped. |
+| `strength_model` | Strength. 0 turns it off and negative values are supported. |
+| `enabled` | Passes the model through unchanged when off. |
+| `report` | Loaded and skipped weights, adapter types and saved scaling, as JSON. |
+
+Wire the three character outputs of Apply Keyword LoRAs into it:
 
 ```
-Krea2 model → Apply Keyword LoRAs → other LoRA loaders → Krea2T Character LoRA → sampler
+Krea2 model → Apply Keyword LoRAs → other LoRA loaders → Krea2 Character LoRA (Image Only) → sampler
                      character_lora → lora_name
                      character_strength → strength_model
                      character_enabled → enabled
 ```
 
-The character's trigger words are already in the `positive` output, so nothing else is needed to prompt the character. One wiring covers both modes: an `image only` character is loaded by the Krea2T node, and a `full LoRA` character is loaded by Apply Keyword LoRAs while the Krea2T node is bypassed. A rule or inline tag for the selected character's LoRA follows the character's `apply_as` instead of loading it again.
+The character's trigger words are already in the `positive` output, so nothing else is needed to prompt the character. One wiring covers both modes: an `image only` character is loaded by this node, and a `full LoRA` character is loaded by Apply Keyword LoRAs while this node is bypassed. A rule or inline tag for the selected character's LoRA follows the character's `apply_as` instead of loading it again.
+
+This node is a mirror of **Krea2T Character LoRA — Image Only** from ComfyUI-Krea2T-Enhancer by [capitan01R](https://github.com/capitan01R), under the MIT license ([`character_lora/LICENSE`](character_lora/LICENSE)). All credit for the technique goes to them. It is mirrored here because the original repository and registry listing have been removed and our fork of it is private, so `image only` characters would otherwise depend on a node nobody else can install. It adds Krea2 NAG support and uses its own node id, so it can be installed alongside the original. Workflows using the original node keep using it until you swap it for this one.
 
 ### LoRA Picker
 Picks a specific LoRA, or a random one from one folder of the loras folder. `lora` lists every LoRA; a specific LoRA is output as is and `folder` is ignored. `folder`, e.g. `characters`, sets where random picks come from; `(all)` covers every LoRA. Both are plain dropdowns, so they work as subgraph inputs. Besides a specific LoRA, `lora` can be:

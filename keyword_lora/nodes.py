@@ -100,7 +100,7 @@ class KeywordCharacterNode(io.ComfyNode):
                                         "and also passed out on the trigger output of Apply Keyword LoRAs."),
                 io.Combo.Input("apply_as", options=[CHARACTER_IMAGE_ONLY, CHARACTER_FULL_LORA], default=CHARACTER_IMAGE_ONLY,
                                tooltip="image only passes the LoRA out of Apply Keyword LoRAs for a character loader such as "
-                                       "Krea2T Character LoRA. full LoRA has Apply Keyword LoRAs load it like a normal LoRA, "
+                                       "Krea2 Character LoRA (Image Only). full LoRA has Apply Keyword LoRAs load it like a normal LoRA, "
                                        "at this strength for both model and clip."),
                 KeywordCharacters.Input("previous_characters", optional=True,
                                         tooltip="Characters earlier in the chain. They are checked before this one."),
