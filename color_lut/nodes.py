@@ -1,26 +1,10 @@
 import comfy.model_management
 import torch
-import torch.nn.functional as F
 from comfy_api.latest import io
 
+from .lut import apply_lut, lut_strip_to_volume
+
 CATEGORY = "TonyVoNodes"
-
-
-def lut_strip_to_volume(lut_image):
-    """A strip of N tiles of N x N (red across, green down, blue by tile) as a [1, 3, blue, green, red] volume."""
-    size, width = lut_image.shape[1:3]
-    if width != size * size:
-        raise ValueError(f"LUT image must be a strip of {size} tiles of {size}x{size} ({size * size}x{size}), got {width}x{size}.")
-    strip = lut_image[0, :, :, :3].movedim(-1, 0)
-    return strip.unflatten(2, (size, size)).permute(0, 2, 1, 3).unsqueeze(0)
-
-
-def apply_lut(image, lut_volume):
-    """Looks up each pixel in the LUT volume with trilinear interpolation."""
-    rgb = image[..., :3].clamp(0, 1)
-    grid = (rgb * 2 - 1).reshape(1, -1, 1, 1, 3)
-    graded = F.grid_sample(lut_volume, grid, mode="bilinear", padding_mode="border", align_corners=True)
-    return graded.reshape(3, -1).movedim(0, -1).reshape(rgb.shape)
 
 
 class ApplyLutNode(io.ComfyNode):
@@ -43,7 +27,12 @@ class ApplyLutNode(io.ComfyNode):
 
     @classmethod
     def execute(cls, image, lut, strength) -> io.NodeOutput:
-        image = image.to(comfy.model_management.get_torch_device())
-        lut_volume = lut_strip_to_volume(lut.to(image))
-        graded = torch.lerp(image[..., :3], apply_lut(image, lut_volume), strength)
-        return io.NodeOutput(torch.cat((graded, image[..., 3:]), dim=-1).to(comfy.model_management.intermediate_device()))
+        device = comfy.model_management.get_torch_device()
+        lut_volume = lut_strip_to_volume(lut.to(device, image.dtype))
+        # One frame at a time, so a long video batch does not have to fit in VRAM.
+        graded_frames = []
+        for frame in image.split(1):
+            frame = frame.to(device)
+            graded = torch.lerp(frame[..., :3], apply_lut(frame, lut_volume), strength)
+            graded_frames.append(torch.cat((graded, frame[..., 3:]), dim=-1).to(comfy.model_management.intermediate_device()))
+        return io.NodeOutput(torch.cat(graded_frames))
