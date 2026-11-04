@@ -1,0 +1,14 @@
+[project]
+name = "tonyvo-comfyui-nodes"
+description = "Keyword-triggered LoRAs, image-only Krea2 character LoRAs, slider LoRAs, face coverage, LUT color grading and saved LLM text."
+version = "3.0.0"
+license = {file = "LICENSE"}
+dependencies = ["opencv-python-headless"]
+
+[project.urls]
+Repository = "https://github.com/tonyvo30/TonyVoComfyUINodes"
+
+[tool.comfy]
+PublisherId = "tonyvo30"
+DisplayName = "Tony Vo ComfyUI Nodes"
+Icon = ""
